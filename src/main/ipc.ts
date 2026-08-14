@@ -1,0 +1,100 @@
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { IPC } from '../shared/ipc-channels'
+import { startChat, cancelChat } from './llm'
+import type { AppStore } from './store'
+import type { AppSettings, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
+
+export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | null): void {
+  ipcMain.handle(IPC.SettingsGet, () => store.getSnapshot().settings)
+
+  ipcMain.handle(IPC.SettingsSet, (_event, patch: Partial<AppSettings>) => {
+    return store.updateSettings(patch)
+  })
+
+  ipcMain.handle(IPC.ProvidersList, () => store.getSnapshot().providers)
+
+  ipcMain.handle(IPC.ProviderUpsert, (_event, provider: ProviderConfig) => {
+    store.upsertProvider(provider)
+  })
+
+  ipcMain.handle(IPC.ProviderDelete, (_event, id: string) => {
+    store.deleteProvider(id)
+  })
+
+  ipcMain.handle(IPC.ProviderTest, async (_event, provider: ProviderConfig): Promise<ProviderTestResult> => {
+    let base = provider.baseUrl.trim()
+    while (base.endsWith('/')) base = base.slice(0, -1)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+    try {
+      const res = await fetch(base + '/models', {
+        headers: { 'Authorization': 'Bearer ' + provider.apiKey },
+        signal: controller.signal
+      })
+      if (!res.ok) {
+        return { ok: false, message: 'HTTP ' + res.status }
+      }
+      const json = (await res.json()) as { data?: Array<{ id: string }> }
+      const models = (json.data ?? []).map(m => ({ id: m.id }))
+      return { ok: true, message: '连接成功，发现 ' + models.length + ' 个模型', models }
+    } catch (err) {
+      const e = err as Error
+      return { ok: false, message: e && e.message ? e.message : '连接失败' }
+    } finally {
+      clearTimeout(timer)
+    }
+  })
+
+  ipcMain.handle(IPC.ConversationsList, () => store.getSnapshot().conversations)
+
+  ipcMain.handle(IPC.ConversationGet, (_event, id: string) => store.getConversation(id))
+
+  ipcMain.handle(IPC.ConversationUpsert, (_event, conversation: Conversation) => {
+    store.upsertConversation(conversation)
+  })
+
+  ipcMain.handle(IPC.ConversationDelete, (_event, id: string) => {
+    store.deleteConversation(id)
+  })
+
+  ipcMain.handle(IPC.ChatStart, (event, req: ChatStartRequest) => {
+    const provider = store.getSnapshot().providers.find(p => p.id === req.providerId)
+    const win = BrowserWindow.fromWebContents(event.sender) ?? getWindow()
+    if (!provider) return { ok: false, message: '未找到该模型服务' }
+    if (!win) return { ok: false, message: '窗口不可用' }
+    if (!provider.apiKey) return { ok: false, message: '请先在设置中配置 API Key' }
+    startChat(win, req, provider)
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.ChatCancel, (_event, runId: string) => {
+    cancelChat(runId)
+  })
+
+  ipcMain.handle(IPC.WindowMinimize, event => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+
+  ipcMain.handle(IPC.WindowToggleMaximize, event => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
+  })
+
+  ipcMain.handle(IPC.WindowClose, event => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+
+  ipcMain.handle(IPC.WindowIsMaximized, event => {
+    return BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
+  })
+
+  ipcMain.handle(IPC.OpenExternal, async (_event, url: string) => {
+    if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+      await shell.openExternal(url)
+    }
+  })
+
+  ipcMain.handle(IPC.AppVersion, () => app.getVersion())
+}

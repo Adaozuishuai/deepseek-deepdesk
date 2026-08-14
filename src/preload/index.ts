@@ -1,0 +1,54 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import { IPC } from '../shared/ipc-channels'
+import type { DeepDeskApi } from '../shared/api'
+import type { AppSettings, ChatChunkPayload, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
+
+const api: DeepDeskApi = {
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.SettingsGet) as Promise<AppSettings>,
+    set: (patch: Partial<AppSettings>) => ipcRenderer.invoke(IPC.SettingsSet, patch) as Promise<AppSettings>
+  },
+  providers: {
+    list: () => ipcRenderer.invoke(IPC.ProvidersList) as Promise<ProviderConfig[]>,
+    upsert: (provider: ProviderConfig) => ipcRenderer.invoke(IPC.ProviderUpsert, provider) as Promise<void>,
+    remove: (id: string) => ipcRenderer.invoke(IPC.ProviderDelete, id) as Promise<void>,
+    test: (provider: ProviderConfig) => ipcRenderer.invoke(IPC.ProviderTest, provider) as Promise<ProviderTestResult>
+  },
+  conversations: {
+    list: () => ipcRenderer.invoke(IPC.ConversationsList) as Promise<Conversation[]>,
+    get: (id: string) => ipcRenderer.invoke(IPC.ConversationGet, id) as Promise<Conversation | null>,
+    upsert: (conversation: Conversation) => ipcRenderer.invoke(IPC.ConversationUpsert, conversation) as Promise<void>,
+    remove: (id: string) => ipcRenderer.invoke(IPC.ConversationDelete, id) as Promise<void>
+  },
+  chat: {
+    start: (req: ChatStartRequest) => ipcRenderer.invoke(IPC.ChatStart, req) as Promise<{ ok: boolean; message?: string }>,
+    cancel: (runId: string) => ipcRenderer.invoke(IPC.ChatCancel, runId) as Promise<void>,
+    onChunk: (cb: (payload: ChatChunkPayload) => void) => {
+      const listener = (_event: unknown, payload: ChatChunkPayload): void => cb(payload)
+      ipcRenderer.on(IPC.ChatChunk, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.ChatChunk, listener)
+      }
+    }
+  },
+  window: {
+    minimize: () => ipcRenderer.invoke(IPC.WindowMinimize) as Promise<void>,
+    toggleMaximize: () => ipcRenderer.invoke(IPC.WindowToggleMaximize) as Promise<void>,
+    close: () => ipcRenderer.invoke(IPC.WindowClose) as Promise<void>,
+    isMaximized: () => ipcRenderer.invoke(IPC.WindowIsMaximized) as Promise<boolean>,
+    onMaximizedChange: (cb: (maximized: boolean) => void) => {
+      const listener = (_event: unknown, maximized: boolean): void => cb(maximized)
+      ipcRenderer.on(IPC.WindowMaximizedChanged, listener)
+      return () => {
+        ipcRenderer.removeListener(IPC.WindowMaximizedChanged, listener)
+      }
+    }
+  },
+  openExternal: (url: string) => ipcRenderer.invoke(IPC.OpenExternal, url) as Promise<void>,
+  appVersion: () => ipcRenderer.invoke(IPC.AppVersion) as Promise<string>
+}
+
+contextBridge.exposeInMainWorld('api', api)
+
+export type { DeepDeskApi }
+export { api }
