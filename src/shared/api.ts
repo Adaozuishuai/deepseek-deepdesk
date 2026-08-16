@@ -1,4 +1,5 @@
 import type { AppSettings, ProviderConfig, ProviderTestResult, Conversation, ChatStartRequest, ChatChunkPayload } from './types'
+import type { AgentEvent, AgentRunRequest } from './agent-types'
 
 export interface DeepDeskApi {
   settings: {
@@ -21,6 +22,13 @@ export interface DeepDeskApi {
     start: (req: ChatStartRequest) => Promise<{ ok: boolean; message?: string }>
     cancel: (runId: string) => Promise<void>
     onChunk: (cb: (payload: ChatChunkPayload) => void) => () => void
+  }
+  agent: {
+    start: (req: AgentRunRequest) => Promise<{ ok: boolean; message?: string }>
+    cancel: (runId: string) => Promise<void>
+    approve: (callId: string, approved: boolean) => Promise<void>
+    pickDirectory: () => Promise<string | null>
+    onChunk: (cb: (event: AgentEvent) => void) => () => void
   }
   window: {
     minimize: () => Promise<void>

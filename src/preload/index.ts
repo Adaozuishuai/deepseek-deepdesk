@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import type { DeepDeskApi } from '../shared/api'
+import type { AgentEvent, AgentRunRequest } from '../shared/agent-types'
 import type { AppSettings, ChatChunkPayload, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
 
 const api: DeepDeskApi = {
@@ -26,9 +27,18 @@ const api: DeepDeskApi = {
     onChunk: (cb: (payload: ChatChunkPayload) => void) => {
       const listener = (_event: unknown, payload: ChatChunkPayload): void => cb(payload)
       ipcRenderer.on(IPC.ChatChunk, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.ChatChunk, listener)
-      }
+      return () => { ipcRenderer.removeListener(IPC.ChatChunk, listener) }
+    }
+  },
+  agent: {
+    start: (req: AgentRunRequest) => ipcRenderer.invoke(IPC.AgentStart, req) as Promise<{ ok: boolean; message?: string }>,
+    cancel: (runId: string) => ipcRenderer.invoke(IPC.AgentCancel, runId) as Promise<void>,
+    approve: (callId: string, approved: boolean) => ipcRenderer.invoke(IPC.AgentApprove, callId, approved) as Promise<void>,
+    pickDirectory: () => ipcRenderer.invoke(IPC.AgentPickDirectory) as Promise<string | null>,
+    onChunk: (cb: (event: AgentEvent) => void) => {
+      const listener = (_event: unknown, event: AgentEvent): void => cb(event)
+      ipcRenderer.on(IPC.AgentChunk, listener)
+      return () => { ipcRenderer.removeListener(IPC.AgentChunk, listener) }
     }
   },
   window: {
@@ -39,9 +49,7 @@ const api: DeepDeskApi = {
     onMaximizedChange: (cb: (maximized: boolean) => void) => {
       const listener = (_event: unknown, maximized: boolean): void => cb(maximized)
       ipcRenderer.on(IPC.WindowMaximizedChanged, listener)
-      return () => {
-        ipcRenderer.removeListener(IPC.WindowMaximizedChanged, listener)
-      }
+      return () => { ipcRenderer.removeListener(IPC.WindowMaximizedChanged, listener) }
     }
   },
   openExternal: (url: string) => ipcRenderer.invoke(IPC.OpenExternal, url) as Promise<void>,
@@ -49,6 +57,3 @@ const api: DeepDeskApi = {
 }
 
 contextBridge.exposeInMainWorld('api', api)
-
-export type { DeepDeskApi }
-export { api }

@@ -1,8 +1,10 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import { startChat, cancelChat } from './llm'
+import { startAgent, cancelAgent, approveCommand } from './agent'
 import type { AppStore } from './store'
 import type { AppSettings, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
+import type { AgentRunRequest } from '../shared/agent-types'
 
 export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.SettingsGet, () => store.getSnapshot().settings)
@@ -69,6 +71,32 @@ export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | nu
 
   ipcMain.handle(IPC.ChatCancel, (_event, runId: string) => {
     cancelChat(runId)
+  })
+
+  ipcMain.handle(IPC.AgentStart, (event, req: AgentRunRequest) => {
+    const provider = store.getSnapshot().providers.find(p => p.id === req.providerId)
+    const win = BrowserWindow.fromWebContents(event.sender) ?? getWindow()
+    if (!provider) return { ok: false, message: '未找到该模型服务' }
+    if (!win) return { ok: false, message: '窗口不可用' }
+    if (!provider.apiKey) return { ok: false, message: '请先在设置中配置 API Key' }
+    const workdir = req.workdir && req.workdir.trim() ? req.workdir : app.getPath('home')
+    startAgent(win, { ...req, workdir }, provider, store.getSnapshot().settings)
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.AgentCancel, (_event, runId: string) => {
+    cancelAgent(runId)
+  })
+
+  ipcMain.handle(IPC.AgentApprove, (_event, callId: string, approved: boolean) => {
+    approveCommand(callId, approved)
+  })
+
+  ipcMain.handle(IPC.AgentPickDirectory, async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
+    return result.canceled ? null : (result.filePaths[0] ?? null)
   })
 
   ipcMain.handle(IPC.WindowMinimize, event => {

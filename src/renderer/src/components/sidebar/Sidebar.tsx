@@ -5,7 +5,7 @@ import { useSettingsStore } from '../../stores/useSettingsStore'
 import { formatTime } from '../../lib/format'
 import clsx from 'clsx'
 
-export default function Sidebar({ view, onOpenChat, onOpenSettings }: { view: string; onOpenChat: () => void; onOpenSettings: () => void }) {
+export default function Sidebar({ view, agentMode, onOpenChat, onOpenSettings, onAgentModeChange }: { view: string; agentMode: boolean; onOpenChat: () => void; onOpenSettings: () => void; onAgentModeChange: (v: boolean) => void }) {
   const conversations = useChatStore(s => s.conversations)
   const activeId = useChatStore(s => s.activeId)
   const selectConversation = useChatStore(s => s.selectConversation)
@@ -36,6 +36,10 @@ export default function Sidebar({ view, onOpenChat, onOpenSettings }: { view: st
           <Plus size={16} />
         </button>
       </div>
+      <div className='sidebar-modes'>
+        <button className={clsx('mode-tab', !agentMode && 'active')} onClick={() => onAgentModeChange(false)}>对话</button>
+        <button className={clsx('mode-tab', agentMode && 'active')} onClick={() => onAgentModeChange(true)}>Agent</button>
+      </div>
       <div style={{ padding: '0 12px 10px' }}>
         <div className='input-wrap'>
           <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -50,7 +54,7 @@ export default function Sidebar({ view, onOpenChat, onOpenSettings }: { view: st
           </div>
         )}
         {filtered.map(c => (
-          <div key={c.id} className={clsx('conv-item', activeId === c.id && view === 'chat' && 'active')} onClick={() => { selectConversation(c.id); onOpenChat() }}>
+          <div key={c.id} className={clsx('conv-item', activeId === c.id && view === 'chat' && !agentMode && 'active')} onClick={() => { selectConversation(c.id); onOpenChat() }}>
             <div className='conv-title'>{c.title}</div>
             <div className='conv-time'>{formatTime(c.updatedAt)}</div>
             {confirmId === c.id ? (

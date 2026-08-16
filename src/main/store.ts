@@ -10,7 +10,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultModelId: 'deepseek-v4-flash',
   temperature: 1,
   theme: 'dark',
-  enterToSend: true
+  enterToSend: true,
+  agentWorkdir: '',
+  agentAutoApprove: false
 }
 
 function cloneProviders(): ProviderConfig[] {

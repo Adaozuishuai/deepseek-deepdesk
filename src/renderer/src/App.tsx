@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import TitleBar from './components/titlebar/TitleBar'
 import Sidebar from './components/sidebar/Sidebar'
 import ChatView from './components/chat/ChatView'
+import AgentView from './components/agent/AgentView'
 import SettingsView from './components/settings/SettingsView'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useChatStore } from './stores/useChatStore'
+import { useAgentStore } from './stores/useAgentStore'
 import { Loader2, Sparkles } from 'lucide-react'
 
 type View = 'chat' | 'settings'
@@ -12,6 +14,7 @@ type View = 'chat' | 'settings'
 export default function App() {
   const ready = useSettingsStore(s => s.loaded)
   const [view, setView] = useState<View>('chat')
+  const [agentMode, setAgentMode] = useState(false)
 
   useEffect(() => {
     void useSettingsStore.getState().load()
@@ -20,6 +23,7 @@ export default function App() {
   useEffect(() => {
     if (!ready) return
     void useChatStore.getState().init()
+    useAgentStore.getState().init()
   }, [ready])
 
   useEffect(() => {
@@ -44,7 +48,11 @@ export default function App() {
       } else if (e.key === 'Escape') {
         const chat = useChatStore.getState()
         if (chat.streaming) chat.stopStreaming()
-        else setView(v => (v === 'settings' ? 'chat' : v))
+        else {
+          const agent = useAgentStore.getState()
+          if (agent.running) agent.stop()
+          else setView(v => (v === 'settings' ? 'chat' : v))
+        }
       }
     }
     window.addEventListener('keydown', onKey)
@@ -65,11 +73,19 @@ export default function App() {
 
   return (
     <div className='app-shell'>
-      <TitleBar view={view} />
+      <TitleBar view={agentMode && view === 'chat' ? 'agent' : view} />
       <div className='app-body'>
-        <Sidebar view={view} onOpenChat={() => setView('chat')} onOpenSettings={() => setView('settings')} />
+        <Sidebar
+          view={view}
+          agentMode={agentMode}
+          onOpenChat={() => { setAgentMode(false); setView('chat') }}
+          onOpenSettings={() => setView('settings')}
+          onAgentModeChange={v => { setAgentMode(v); setView('chat') }}
+        />
         <main className='app-main'>
-          {view === 'chat' ? <ChatView onOpenSettings={() => setView('settings')} /> : <SettingsView onBack={() => setView('chat')} />}
+          {view === 'chat'
+            ? (agentMode ? <AgentView /> : <ChatView onOpenSettings={() => setView('settings')} />)
+            : <SettingsView onBack={() => setView('chat')} />}
         </main>
       </div>
     </div>

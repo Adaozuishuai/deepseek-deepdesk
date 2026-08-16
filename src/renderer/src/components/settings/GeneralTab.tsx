@@ -65,6 +65,13 @@ export default function GeneralTab() {
           </div>
           <Switch checked={settings.enterToSend} onChange={v => void updateSettings({ enterToSend: v })} />
         </div>
+        <div className='settings-row'>
+          <div>
+            <div className='settings-row-label'>Agent 自动批准命令</div>
+            <div className='settings-row-desc'>开启后 Agent 执行命令不再逐条询问（危险命令仍会询问）</div>
+          </div>
+          <Switch checked={settings.agentAutoApprove} onChange={v => void updateSettings({ agentAutoApprove: v })} />
+        </div>
       </div>
 
       <div className='settings-section-title' style={{ marginTop: 10 }}>数据</div>

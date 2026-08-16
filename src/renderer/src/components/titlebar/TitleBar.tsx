@@ -7,7 +7,7 @@ export default function TitleBar({ view }: { view: string }) {
     void window.api.window.isMaximized().then(setMaximized)
     return window.api.window.onMaximizedChange(setMaximized)
   }, [])
-  const title = view === 'settings' ? '设置' : '对话'
+  const title = view === 'settings' ? '设置' : view === 'agent' ? 'Agent' : '对话'
   return (
     <div className='titlebar drag'>
       <div className='titlebar-title no-drag'>

@@ -49,6 +49,8 @@ export interface AppSettings {
   temperature: number
   theme: Theme
   enterToSend: boolean
+  agentWorkdir: string
+  agentAutoApprove: boolean
 }
 
 export interface AppState {
