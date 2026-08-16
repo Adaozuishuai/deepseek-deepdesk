@@ -13,6 +13,7 @@ export default function Composer({ onOpenSettings }: { onOpenSettings: () => voi
   const setModel = useChatStore(s => s.setModel)
   const activeId = useChatStore(s => s.activeId)
   const conversations = useChatStore(s => s.conversations)
+  const pendingModel = useChatStore(s => s.pendingModel)
   const providers = useSettingsStore(s => s.providers)
   const settings = useSettingsStore(s => s.settings)
   const enterToSend = settings?.enterToSend ?? true
@@ -20,8 +21,8 @@ export default function Composer({ onOpenSettings }: { onOpenSettings: () => voi
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const conv = conversations.find(c => c.id === activeId) ?? null
-  const provider = providers.find(p => p.id === (conv?.providerId ?? settings?.defaultProviderId ?? 'deepseek')) ?? null
-  const modelId = conv?.modelId ?? settings?.defaultModelId ?? 'deepseek-chat'
+  const provider = providers.find(p => p.id === (conv?.providerId ?? pendingModel?.providerId ?? settings?.defaultProviderId ?? 'deepseek')) ?? null
+  const modelId = conv?.modelId ?? pendingModel?.modelId ?? settings?.defaultModelId ?? 'deepseek-chat'
 
   useEffect(() => {
     const ta = taRef.current

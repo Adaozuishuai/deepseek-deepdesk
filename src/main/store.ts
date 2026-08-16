@@ -25,8 +25,9 @@ export class AppStore {
   private data: AppState
   private writing: Promise<void> = Promise.resolve()
 
-  constructor() {
-    this.file = path.join(app.getPath('userData'), 'deepdesk.json')
+  constructor(storageDir?: string) {
+    const dir = storageDir ?? app.getPath('userData')
+    this.file = path.join(dir, 'deepdesk.json')
     this.data = {
       settings: { ...DEFAULT_SETTINGS },
       providers: cloneProviders(),
@@ -105,9 +106,9 @@ export class AppStore {
     this.persist()
   }
 
-  private persist(): void {
+  private persist(): Promise<void> {
     const snapshot = JSON.stringify(this.data, null, 2)
-    this.writing = this.writing
+    const write = this.writing
       .then(async () => {
         const tmp = this.file + '.tmp'
         await fs.writeFile(tmp, snapshot, 'utf-8')
@@ -116,5 +117,11 @@ export class AppStore {
       .catch(err => {
         console.error('[store] 持久化失败:', err)
       })
+    this.writing = write
+    return write
+  }
+
+  flush(): Promise<void> {
+    return this.writing
   }
 }

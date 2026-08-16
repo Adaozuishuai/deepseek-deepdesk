@@ -108,6 +108,7 @@ interface ChatState {
   activeId: string | null
   streaming: { runId: string; conversationId: string } | null
   notice: string | null
+  pendingModel: { providerId: string; modelId: string } | null
   init: () => Promise<void>
   createConversation: (providerId?: string, modelId?: string) => Conversation | null
   selectConversation: (id: string) => void
@@ -128,17 +129,19 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   activeId: null,
   streaming: null,
   notice: null,
+  pendingModel: null,
   init: async () => {
     if (get().initialized) return
     const conversations = await window.api.conversations.list()
     conversations.sort((a, b) => b.updatedAt - a.updatedAt)
     window.api.chat.onChunk(handleChunk)
-    set({ initialized: true, conversations })
+    set({ initialized: true, conversations, activeId: conversations.length > 0 ? conversations[0].id : null })
   },
   createConversation: (providerId, modelId) => {
     const settingsState = useSettingsStore.getState()
-    const provider = providerId ?? settingsState.settings?.defaultProviderId ?? 'deepseek'
-    const model = modelId ?? settingsState.settings?.defaultModelId ?? 'deepseek-chat'
+    const pending = get().pendingModel
+    const provider = providerId ?? pending?.providerId ?? settingsState.settings?.defaultProviderId ?? 'deepseek'
+    const model = modelId ?? pending?.modelId ?? settingsState.settings?.defaultModelId ?? 'deepseek-chat'
     const conv: Conversation = {
       id: uid(),
       title: '新对话',
@@ -149,7 +152,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       temperature: settingsState.settings?.temperature ?? 1,
       messages: []
     }
-    set(s => ({ conversations: [conv, ...s.conversations], activeId: conv.id }))
+    set(s => ({ conversations: [conv, ...s.conversations], activeId: conv.id, pendingModel: null }))
     void window.api.conversations.upsert(conv)
     return conv
   },
@@ -170,7 +173,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   setModel: (providerId, modelId) => {
     const { activeId, conversations } = get()
     const conv = conversations.find(c => c.id === activeId)
-    if (!conv) return
+    if (!conv) {
+      set({ pendingModel: { providerId, modelId } })
+      return
+    }
     conv.providerId = providerId
     conv.modelId = modelId
     set({ conversations: replaceConv(conversations, conv) })
