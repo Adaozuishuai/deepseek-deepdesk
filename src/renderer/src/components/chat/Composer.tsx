@@ -22,7 +22,7 @@ export default function Composer({ onOpenSettings }: { onOpenSettings: () => voi
 
   const conv = conversations.find(c => c.id === activeId) ?? null
   const provider = providers.find(p => p.id === (conv?.providerId ?? pendingModel?.providerId ?? settings?.defaultProviderId ?? 'deepseek')) ?? null
-  const modelId = conv?.modelId ?? pendingModel?.modelId ?? settings?.defaultModelId ?? 'deepseek-chat'
+  const modelId = conv?.modelId ?? pendingModel?.modelId ?? settings?.defaultModelId ?? 'deepseek-v4-flash'
 
   useEffect(() => {
     const ta = taRef.current

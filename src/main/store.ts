@@ -7,7 +7,7 @@ import { BUILTIN_PROVIDERS } from '../shared/llm/providers'
 const DEFAULT_SETTINGS: AppSettings = {
   version: 1,
   defaultProviderId: 'deepseek',
-  defaultModelId: 'deepseek-chat',
+  defaultModelId: 'deepseek-v4-flash',
   temperature: 1,
   theme: 'dark',
   enterToSend: true
@@ -48,6 +48,7 @@ export class AppStore {
     }
     if (!this.data.settings) this.data.settings = { ...DEFAULT_SETTINGS }
     if (!this.data.conversations) this.data.conversations = []
+    this.migrateDeepSeekV4()
     await this.persist()
   }
 
@@ -56,6 +57,27 @@ export class AppStore {
     const providers = Array.isArray(parsed.providers) ? parsed.providers : []
     const conversations = Array.isArray(parsed.conversations) ? parsed.conversations : []
     return { settings, providers, conversations }
+  }
+
+  private migrateDeepSeekV4(): void {
+    const oldIds = ['deepseek-chat', 'deepseek-reasoner']
+    const oldToNew: Record<string, string> = {
+      'deepseek-chat': 'deepseek-v4-flash',
+      'deepseek-reasoner': 'deepseek-v4-pro'
+    }
+    const builtin = BUILTIN_PROVIDERS.find(p => p.id === 'deepseek')
+    const ds = this.data.providers.find(p => p.id === 'deepseek')
+    if (builtin && ds && ds.models.some(m => oldIds.includes(m.id))) {
+      ds.models = builtin.models.map(m => ({ ...m }))
+    }
+    if (oldIds.includes(this.data.settings.defaultModelId)) {
+      this.data.settings.defaultModelId = oldToNew[this.data.settings.defaultModelId]
+    }
+    for (const conv of this.data.conversations) {
+      if (conv.providerId === 'deepseek' && oldIds.includes(conv.modelId)) {
+        conv.modelId = oldToNew[conv.modelId]
+      }
+    }
   }
 
   getSnapshot(): AppState {

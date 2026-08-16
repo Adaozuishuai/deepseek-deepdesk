@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -19,18 +19,19 @@ describe('AppStore', () => {
     await store.init()
     const snap = store.getSnapshot()
     expect(snap.providers.find(p => p.id === 'deepseek')).toBeTruthy()
-    expect(snap.settings.defaultModelId).toBe('deepseek-chat')
+    expect(snap.settings.defaultModelId).toBe('deepseek-v4-flash')
+    expect(snap.providers.find(p => p.id === 'deepseek')?.models.map(m => m.id).sort()).toEqual(['deepseek-v4-flash', 'deepseek-v4-pro'])
     expect(snap.conversations).toEqual([])
   })
 
   it('设置持久化并可重新加载', async () => {
     const store = new AppStore(dir)
     await store.init()
-    store.updateSettings({ defaultModelId: 'deepseek-reasoner', temperature: 0.5 })
+    store.updateSettings({ defaultModelId: 'deepseek-v4-pro', temperature: 0.5 })
     await store.flush()
     const store2 = new AppStore(dir)
     await store2.init()
-    expect(store2.getSnapshot().settings.defaultModelId).toBe('deepseek-reasoner')
+    expect(store2.getSnapshot().settings.defaultModelId).toBe('deepseek-v4-pro')
     expect(store2.getSnapshot().settings.temperature).toBe(0.5)
   })
 
@@ -59,5 +60,24 @@ describe('AppStore', () => {
     const snap = store.getSnapshot()
     expect(snap.settings.defaultProviderId).not.toBe('deepseek')
     expect(snap.settings.defaultProviderId).toBe(snap.providers[0].id)
+  })
+
+  it('将旧模型代码迁移到 V4（保留 API Key 与会话）', async () => {
+    writeFileSync(join(dir, 'deepdesk.json'), JSON.stringify({
+      settings: { version: 1, defaultProviderId: 'deepseek', defaultModelId: 'deepseek-reasoner', temperature: 1, theme: 'dark', enterToSend: true },
+      providers: [{
+        id: 'deepseek', name: 'DeepSeek', type: 'openai', baseUrl: 'https://api.deepseek.com', apiKey: 'sk-keep-me', isBuiltIn: true, createdAt: 0,
+        models: [{ id: 'deepseek-chat' }, { id: 'deepseek-reasoner' }]
+      }],
+      conversations: [{ id: 'c1', title: 't', createdAt: 1, updatedAt: 1, providerId: 'deepseek', modelId: 'deepseek-reasoner', temperature: 1, messages: [] }]
+    }))
+    const store = new AppStore(dir)
+    await store.init()
+    const snap = store.getSnapshot()
+    const ds = snap.providers.find(p => p.id === 'deepseek')!
+    expect(ds.apiKey).toBe('sk-keep-me')
+    expect(ds.models.map(m => m.id).sort()).toEqual(['deepseek-v4-flash', 'deepseek-v4-pro'])
+    expect(snap.settings.defaultModelId).toBe('deepseek-v4-pro')
+    expect(snap.conversations[0].modelId).toBe('deepseek-v4-pro')
   })
 })

@@ -141,7 +141,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const settingsState = useSettingsStore.getState()
     const pending = get().pendingModel
     const provider = providerId ?? pending?.providerId ?? settingsState.settings?.defaultProviderId ?? 'deepseek'
-    const model = modelId ?? pending?.modelId ?? settingsState.settings?.defaultModelId ?? 'deepseek-chat'
+    const model = modelId ?? pending?.modelId ?? settingsState.settings?.defaultModelId ?? 'deepseek-v4-flash'
     const conv: Conversation = {
       id: uid(),
       title: '新对话',

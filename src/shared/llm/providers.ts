@@ -10,8 +10,8 @@ export const BUILTIN_PROVIDERS: ProviderConfig[] = [
     isBuiltIn: true,
     createdAt: 0,
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek-V3（通用对话）', contextWindow: 128000 },
-      { id: 'deepseek-reasoner', name: 'DeepSeek-R1（深度推理）', contextWindow: 128000, supportsReasoning: true }
+      { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash（快速）', contextWindow: 128000 },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro（深度思考）', contextWindow: 128000, supportsReasoning: true }
     ]
   },
   {

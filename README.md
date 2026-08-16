@@ -7,7 +7,7 @@
 
 ## ✨ 特性
 
-- **开箱即用**：默认内置 DeepSeek（deepseek-chat / deepseek-reasoner），只需粘贴 API Key
+- **开箱即用**：默认内置 DeepSeek（deepseek-v4-flash / deepseek-v4-pro），只需粘贴 API Key
 - **自定义模型服务**：任意 OpenAI 兼容 Base URL + API Key + 模型列表，支持「测试连接」一键导入模型
 - **丝滑流式对话**：SSE 流式输出、50ms 节流渲染、打字光标、思考过程（reasoning_content）折叠展示
 - **完整的 Markdown 渲染**：表格 / 代码块高亮 / 一键复制 / 外部链接安全打开
