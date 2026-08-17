@@ -261,7 +261,7 @@ input, textarea { user-select: text; }
 .composer-wrap { position: relative; }
 .composer { display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
 .composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 4px 24px rgba(0, 0, 0, 0.25); }
-.composer-textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; overflow: hidden; color: var(--text); font-size: 16px; line-height: 24px; padding: 4px 16px 0; font-family: inherit; max-height: 220px; }
+.composer-textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; overflow: hidden; color: var(--text); font-size: 16px; line-height: 24px; padding: 6px 16px 4px; min-height: 52px; font-family: inherit; max-height: 220px; }
 .composer-textarea::placeholder { color: var(--text-muted); }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 8px 8px; }
 .composer-hint { font-size: var(--fs-2xs); color: var(--text-muted); flex: 1; }
