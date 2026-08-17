@@ -49,7 +49,7 @@ export default function Sidebar({ view, agentMode, onOpenChat, onOpenSettings, o
       <div className='sidebar-label'>最近对话</div>
       <div className='sidebar-scroll'>
         {filtered.length === 0 && (
-          <div className='muted text-xs' style={{ textAlign: 'center', padding: '24px 8px' }}>
+          <div className='muted fs-xs' style={{ textAlign: 'center', padding: '24px 8px' }}>
             {conversations.length === 0 ? '还没有对话，开始你的第一段对话吧' : '没有匹配的对话'}
           </div>
         )}
@@ -71,7 +71,7 @@ export default function Sidebar({ view, agentMode, onOpenChat, onOpenSettings, o
         <div className='model-chip' onClick={onOpenSettings} title='当前默认模型服务，点击进入设置'>
           <span className={clsx('dot', !configured && 'off')} />
           <span className='name'>{currentProvider ? currentProvider.name : '未配置'}</span>
-          {configured && settings && <span className='muted mono text-2xs'>{settings.defaultModelId}</span>}
+          {configured && settings && <span className='muted mono fs-2xs'>{settings.defaultModelId}</span>}
         </div>
         <button className='icon-btn' title='设置 (Ctrl+,)' onClick={onOpenSettings}><Settings size={15} /></button>
       </div>

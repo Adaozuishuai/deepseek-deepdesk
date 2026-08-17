@@ -64,6 +64,7 @@ export default function AgentView() {
   const sessions = useAgentStore(s => s.sessions)
   const loadSession = useAgentStore(s => s.loadSession)
   const deleteSession = useAgentStore(s => s.deleteSession)
+  const error = useAgentStore(s => s.error)
   const [text, setText] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -104,6 +105,7 @@ export default function AgentView() {
 
   return (
     <div className='agent-view'>
+      {error && <div className='agent-error' style={{ margin: '10px 24px 0' }}>{error}</div>}
       {pendingApproval && (
         <div className='agent-approval'>
           <div className='agent-approval-title'>{pendingApproval.reason || '等待批准'}</div>
@@ -121,15 +123,17 @@ export default function AgentView() {
             <span>历史会话（{sessions.length}）</span>
             <button className='icon-btn' onClick={() => setShowHistory(false)}><X size={14} /></button>
           </div>
-          {sessions.length === 0 ? (
-            <div className='muted text-xs' style={{ padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
-          ) : sessions.map(s => (
-            <div key={s.id} className='agent-history-item'>
-              <div className='agent-history-task' onClick={() => { loadSession(s.id); setShowHistory(false) }} title={s.task}>{s.task}</div>
-              <span className='conv-time'>{formatTime(s.updatedAt)}</span>
-              <button className='icon-btn' title='删除' onClick={() => void deleteSession(s.id)}><Trash2 size={12} /></button>
-            </div>
-          ))}
+          <div className='agent-history-scroll'>
+            {sessions.length === 0 ? (
+              <div className='muted fs-xs' style={{ padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
+            ) : sessions.map(s => (
+              <div key={s.id} className='agent-history-item'>
+                <div className='agent-history-task' onClick={() => { loadSession(s.id); setShowHistory(false) }} title={s.task}>{s.task}</div>
+                <span className='conv-time'>{formatTime(s.updatedAt)}</span>
+                <button className='icon-btn' title='删除' onClick={() => void deleteSession(s.id)}><Trash2 size={12} /></button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {steps.length === 0 ? (
