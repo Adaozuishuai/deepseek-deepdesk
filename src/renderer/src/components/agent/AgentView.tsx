@@ -122,7 +122,7 @@ export default function AgentView() {
             <button className='icon-btn' onClick={() => setShowHistory(false)}><X size={14} /></button>
           </div>
           {sessions.length === 0 ? (
-            <div className='muted' style={{ fontSize: 12, padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
+            <div className='muted text-xs' style={{ padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
           ) : sessions.map(s => (
             <div key={s.id} className='agent-history-item'>
               <div className='agent-history-task' onClick={() => { loadSession(s.id); setShowHistory(false) }} title={s.task}>{s.task}</div>

@@ -107,7 +107,7 @@ export default function ProviderCard({ provider }: { provider: ProviderConfig })
               <span className='remove' onClick={() => setDraft(d => ({ ...d, models: d.models.filter(x => x.id !== m.id) }))}><X size={11} /></span>
             </span>
           ))}
-          {draft.models.length === 0 && <span className='muted' style={{ fontSize: 12 }}>暂无模型，可点击「测试连接」自动导入</span>}
+          {draft.models.length === 0 && <span className='muted text-xs'>暂无模型，可点击「测试连接」自动导入</span>}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <Input value={newModelId} onChange={e => setNewModelId(e.target.value)} placeholder='添加模型 ID，如 deepseek-v4-flash' onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addModel() } }} />
