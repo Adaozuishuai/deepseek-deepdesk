@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { Bot, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
@@ -168,7 +168,6 @@ export default function AgentView() {
       )}
       {steps.length === 0 ? (
         <div className='agent-empty'>
-          <div className='empty-orb'><Sparkles size={30} /></div>
           <div className='empty-title'>你好，我是 DeepDesk</div>
           <div className='empty-sub'>直接问我问题，或让我帮你写代码、执行命令、读写文件、发飞书消息。先选个工作目录，然后告诉我做什么。</div>
           <div className='quick-chips'>
