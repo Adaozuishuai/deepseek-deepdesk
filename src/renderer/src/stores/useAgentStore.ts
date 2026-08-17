@@ -12,6 +12,7 @@ interface AgentState {
   currentSessionId: string
   steps: AgentStep[]
   sessions: AgentSession[]
+  activeSessionId: string | null
   pendingApproval: { callId: string; command: string; cwd: string; target: string; reason: string } | null
   error: string | null
   init: () => void
@@ -78,6 +79,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     currentSessionId: '',
     steps: [],
     sessions: [],
+    activeSessionId: null,
     pendingApproval: null,
     error: null,
     init: () => {
@@ -100,7 +102,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       }
       const runId = 'agent-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
       const sessionId = 'sess-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
-      set({ running: true, currentRunId: runId, currentTask: t, currentModelId: modelId, currentSessionId: sessionId, error: null, steps: [{ kind: 'task', text: t }], pendingApproval: null })
+      set({ running: true, currentRunId: runId, currentTask: t, currentModelId: modelId, currentSessionId: sessionId, activeSessionId: null, error: null, steps: [{ kind: 'task', text: t }], pendingApproval: null })
       const res = await window.api.agent.start({ runId, providerId, modelId, workdir: get().workdir, task: t, temperature: ss.settings?.temperature ?? 1 })
       if (!res.ok) {
         append({ kind: 'error', message: res.message ?? '启动失败' })
@@ -127,7 +129,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     loadSession: (id) => {
       const s = get().sessions.find(x => x.id === id)
       if (!s) return
-      set({ steps: s.steps, currentTask: s.task, workdir: s.workdir, currentSessionId: '', running: false, currentRunId: null, pendingApproval: null, error: null })
+      set({ steps: s.steps, currentTask: s.task, workdir: s.workdir, currentSessionId: '', activeSessionId: id, running: false, currentRunId: null, pendingApproval: null, error: null })
     },
     deleteSession: async (id) => {
       await window.api.agent.deleteSession(id)
@@ -135,7 +137,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     },
     clear: () => {
       if (get().running) get().stop()
-      set({ steps: [], error: null, pendingApproval: null, currentTask: '', currentSessionId: '' })
+      set({ steps: [], error: null, pendingApproval: null, currentTask: '', currentSessionId: '', activeSessionId: null })
     }
   }
 })

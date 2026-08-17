@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock, History } from 'lucide-react'
+import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
 import clsx from 'clsx'
-import { formatTime } from '../../lib/format'
 import '../../assets/agent.css'
 
 function parseArgs(args?: string): Record<string, unknown> {
@@ -22,6 +21,8 @@ function ToolCard({ step }: { step: AgentStep }) {
     : step.name === 'edit_file' ? '编辑 ' + String(a.path ?? '')
     : step.name === 'list_files' ? '列出 ' + String(a.path ?? '工作目录')
     : step.name === 'search_content' ? '搜索 ' + String(a.pattern ?? '')
+    : step.name === 'search_feishu_user' ? '搜索飞书通讯录 ' + String(a.name ?? '')
+    : step.name === 'send_feishu_message' ? '发送飞书消息'
     : String(step.name ?? '工具')
   const statusText = step.status === 'running' ? '运行中…' : step.status === 'ok' ? '完成' : step.status === 'error' ? '出错' : step.status === 'denied' ? '已拒绝' : ''
   return (
@@ -53,6 +54,7 @@ export default function AgentView() {
   const running = useAgentStore(s => s.running)
   const workdir = useAgentStore(s => s.workdir)
   const pendingApproval = useAgentStore(s => s.pendingApproval)
+  const error = useAgentStore(s => s.error)
   const start = useAgentStore(s => s.start)
   const stop = useAgentStore(s => s.stop)
   const approve = useAgentStore(s => s.approve)
@@ -61,12 +63,7 @@ export default function AgentView() {
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
-  const sessions = useAgentStore(s => s.sessions)
-  const loadSession = useAgentStore(s => s.loadSession)
-  const deleteSession = useAgentStore(s => s.deleteSession)
-  const error = useAgentStore(s => s.error)
   const [text, setText] = useState('')
-  const [showHistory, setShowHistory] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
@@ -117,30 +114,11 @@ export default function AgentView() {
           </div>
         </div>
       )}
-      {showHistory && (
-        <div className='agent-history'>
-          <div className='agent-history-head'>
-            <span>历史会话（{sessions.length}）</span>
-            <button className='icon-btn' onClick={() => setShowHistory(false)}><X size={14} /></button>
-          </div>
-          <div className='agent-history-scroll'>
-            {sessions.length === 0 ? (
-              <div className='muted fs-xs' style={{ padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
-            ) : sessions.map(s => (
-              <div key={s.id} className='agent-history-item'>
-                <div className='agent-history-task' onClick={() => { loadSession(s.id); setShowHistory(false) }} title={s.task}>{s.task}</div>
-                <span className='conv-time'>{formatTime(s.updatedAt)}</span>
-                <button className='icon-btn' title='删除' onClick={() => void deleteSession(s.id)}><Trash2 size={12} /></button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {steps.length === 0 ? (
         <div className='agent-empty'>
           <div className='empty-orb'><Sparkles size={30} /></div>
-          <div className='empty-title'>DeepDesk Agent</div>
-          <div className='empty-sub'>给它一个任务，它会自己读文件、写代码、执行命令来完成。示例：'帮我看看这个项目有哪些文件'、'写一个 Node 脚本统计当前目录的文件数并运行'。</div>
+          <div className='empty-title'>你好，我是 DeepDesk</div>
+          <div className='empty-sub'>直接问我问题，或让我帮你写代码、执行命令、读写文件、发飞书消息。先选个工作目录，然后告诉我做什么。</div>
           <div className='quick-chips'>
             <button className='quick-chip' onClick={() => void pickDirectory()}><FolderOpen size={13} /> {workdir || '选择工作目录'}</button>
           </div>
@@ -157,7 +135,7 @@ export default function AgentView() {
           <textarea
             ref={taRef}
             className='composer-textarea'
-            placeholder='描述一个任务，Agent 会自己读文件、写代码、执行命令…'
+            placeholder='发消息，或让我帮你做点事…'
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={onKeyDown}
@@ -171,7 +149,6 @@ export default function AgentView() {
             <button className='model-pill' onClick={() => void pickDirectory()} title='选择工作目录'>
               <FolderOpen size={13} /><span className='name'>{workdir || '选择工作目录'}</span>
             </button>
-            <button className='icon-btn' title='历史会话' onClick={() => setShowHistory(o => !o)}><History size={15} /></button>
             <div className='composer-hint'>{modelLabel}</div>
             {steps.length > 0 && !running && (
               <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>
@@ -179,7 +156,7 @@ export default function AgentView() {
             {running ? (
               <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
             ) : (
-              <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='运行'><Play size={15} /></button>
+              <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='发送'><Play size={15} /></button>
             )}
           </div>
         </div>
