@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Settings, Search, Trash2, MessageSquare } from 'lucide-react'
+import { Plus, Settings, Search, Trash2, Pencil, MessageSquare } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { formatTime } from '../../lib/format'
@@ -65,14 +65,15 @@ export default function Sidebar({ view, onOpenSettings }: { view: string; onOpen
             ) : (
               <div className='conv-title' title='双击重命名' onDoubleClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }}>{s.task}</div>
             )}
-            <div className='conv-time'>{formatTime(s.updatedAt)}</div>
-            {confirmId === s.id ? (
+            {renamingId !== s.id && <div className='conv-time'>{formatTime(s.updatedAt)}</div>}
+            {renamingId !== s.id && (confirmId === s.id ? (
               <div className='conv-del confirm' onClick={e => { e.stopPropagation(); void deleteSession(s.id); setConfirmId(null) }}>确认</div>
             ) : (
-              <div className='conv-del' onClick={e => { e.stopPropagation(); setConfirmId(confirmId === s.id ? null : s.id) }} title='删除'>
-                <Trash2 size={13} />
-              </div>
-            )}
+              <>
+                <div className='conv-del' onClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }} title='重命名'><Pencil size={12} /></div>
+                <div className='conv-del' onClick={e => { e.stopPropagation(); setConfirmId(confirmId === s.id ? null : s.id) }} title='删除'><Trash2 size={13} /></div>
+              </>
+            ))}
           </div>
         ))}
       </div>
