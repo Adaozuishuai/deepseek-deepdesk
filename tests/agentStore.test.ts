@@ -27,7 +27,8 @@ beforeEach(() => {
       onChunk: (cb: (ev: AgentEvent) => void) => { chunkCb = cb; return () => { chunkCb = null } },
       listSessions: async () => saved,
       saveSession: async (s: AgentSession) => { const i = saved.findIndex(x => x.id === s.id); if (i >= 0) saved[i] = s; else saved.push(s) },
-      deleteSession: async (id: string) => { saved = saved.filter(x => x.id !== id) }
+      deleteSession: async (id: string) => { saved = saved.filter(x => x.id !== id) },
+      renameSession: async (id: string, title: string) => { const s = saved.find(x => x.id === id); if (s) s.task = title }
     },
     window: { minimize: async () => {}, toggleMaximize: async () => {}, close: async () => {}, isMaximized: async () => false, onMaximizedChange: () => () => {} },
     openExternal: async () => {},
@@ -80,6 +81,15 @@ describe('useAgentStore 会话持久化', () => {
     await new Promise(r => setTimeout(r, 60))
     expect(saved.length).toBe(1)
     expect(saved[0].steps.filter(x => x.kind === 'task').length).toBe(2)
+  })
+
+  it('renameSession 重命名会话', async () => {
+    const seed = { id: 's1', task: '旧标题', workdir: '', modelId: 'm', createdAt: 1, updatedAt: 1, steps: [], history: [] }
+    saved = [seed]
+    useAgentStore.setState({ sessions: [seed] })
+    await useAgentStore.getState().renameSession('s1', '新标题')
+    expect(useAgentStore.getState().sessions[0].task).toBe('新标题')
+    expect(saved[0].task).toBe('新标题')
   })
 
   it('deleteSession 删除历史', async () => {
