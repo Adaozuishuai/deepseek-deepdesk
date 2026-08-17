@@ -10,17 +10,24 @@ import Markdown from '../chat/Markdown'
 import '../../assets/agent.css'
 
 function estimateTokens(history: Array<Record<string, unknown>>): number {
-  let chars = 0
+  let tokens = 0
   for (const m of history) {
-    if (typeof m.content === 'string') chars += m.content.length
+    const parts: string[] = []
+    if (typeof m.content === 'string') parts.push(m.content)
     if (Array.isArray(m.tool_calls)) {
       for (const tc of m.tool_calls as Array<Record<string, unknown>>) {
         const fn = tc.function as Record<string, unknown> | undefined
-        if (fn && typeof fn.arguments === 'string') chars += fn.arguments.length
+        if (fn && typeof fn.arguments === 'string') parts.push(fn.arguments)
+      }
+    }
+    for (const part of parts) {
+      for (const ch of part) {
+        const code = ch.charCodeAt(0)
+        tokens += (code >= 0x2e80 && code <= 0x9fff) ? 1 : 0.25
       }
     }
   }
-  return Math.max(1, Math.round(chars / 4))
+  return Math.max(1, Math.round(tokens))
 }
 
 function ContextMeter({ history, contextWindow }: { history: Array<Record<string, unknown>>; contextWindow: number }) {
@@ -200,10 +207,10 @@ export default function AgentView() {
               )}
             </div>
             <div className='composer-right'>
-              <ContextMeter history={history} contextWindow={contextWindow} />
               <select className='composer-select' value={settings?.defaultModelId ?? ''} onChange={e => void updateSettings({ defaultModelId: e.target.value })} title='选择模型'>
                 {(provider?.models ?? []).map(m => <option key={m.id} value={m.id}>{m.name ?? m.id}</option>)}
               </select>
+              <ContextMeter history={history} contextWindow={contextWindow} />
               {running ? (
                 <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
               ) : (

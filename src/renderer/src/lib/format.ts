@@ -14,6 +14,8 @@ export function formatTime(ts: number): string {
 
 export function formatTokens(n: number | undefined): string {
   if (n === undefined || n === null) return ''
+  const scaled = (v: number): string => v >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10)
   if (n < 1000) return String(n)
-  return (n / 1000).toFixed(1) + 'k'
+  if (n < 1000000) return scaled(n / 1000) + 'K'
+  return scaled(n / 1000000) + 'M'
 }
