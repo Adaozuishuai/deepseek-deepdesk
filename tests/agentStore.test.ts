@@ -5,7 +5,7 @@ import { useSettingsStore } from '../src/renderer/src/stores/useSettingsStore'
 
 let chunkCb: ((ev: AgentEvent) => void) | null = null
 let saved: AgentSession[] = []
-let startReqs: Array<{ runId: string; modelId: string }> = []
+let startReqs: Array<{ runId: string; modelId: string; history?: Array<Record<string, unknown>> }> = []
 
 beforeEach(() => {
   chunkCb = null
@@ -20,7 +20,7 @@ beforeEach(() => {
     conversations: { list: async () => [], get: async () => null, upsert: async () => {}, remove: async () => {} },
     chat: { start: async () => ({ ok: true }), cancel: async () => {}, onChunk: () => () => {} },
     agent: {
-      start: async (req: { runId: string; modelId: string }) => { startReqs.push(req); return { ok: true } },
+      start: async (req: { runId: string; modelId: string; history?: Array<Record<string, unknown>> }) => { startReqs.push(req); return { ok: true } },
       cancel: async () => {},
       approve: async () => {},
       pickDirectory: async () => null,
@@ -35,7 +35,7 @@ beforeEach(() => {
   }
   ;(globalThis as unknown as { window: unknown }).window = { api, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout }
   useSettingsStore.setState({ loaded: true, providers: [{ id: 'deepseek', name: 'DeepSeek', type: 'openai', baseUrl: 'https://api.deepseek.com', apiKey: 'sk', models: [], createdAt: 0 }], settings: { version: 1, defaultProviderId: 'deepseek', defaultModelId: 'deepseek-v4-pro', temperature: 1, theme: 'dark', enterToSend: true, agentWorkdir: '', agentPermissionMode: 'ask' } })
-  useAgentStore.setState({ initialized: false, workdir: '', running: false, currentRunId: null, currentTask: '', currentModelId: '', currentSessionId: '', steps: [], sessions: [], pendingApproval: null, error: null })
+  useAgentStore.setState({ initialized: false, workdir: '', running: false, currentRunId: null, currentTask: '', currentModelId: '', currentSessionId: '', steps: [], history: [], sessions: [], activeSessionId: null, pendingApproval: null, error: null })
 })
 
 describe('useAgentStore 会话持久化', () => {
@@ -60,6 +60,26 @@ describe('useAgentStore 会话持久化', () => {
     expect(s.currentTask).toBe('旧任务')
     expect(s.workdir).toBe('/w')
     expect(s.running).toBe(false)
+  })
+
+  it('多轮持续对话：追加步骤、同一会话、携带历史', async () => {
+    useAgentStore.getState().init()
+    await useAgentStore.getState().start('第一问')
+    const req1 = startReqs[0]
+    chunkCb!({ runId: req1.runId, type: 'text', text: '回答一' })
+    chunkCb!({ runId: req1.runId, type: 'done', history: [{ role: 'user', content: '第一问' }, { role: 'assistant', content: '回答一' }] })
+    await new Promise(r => setTimeout(r, 60))
+    await useAgentStore.getState().start('第二问')
+    const req2 = startReqs[1]
+    const tasks = useAgentStore.getState().steps.filter(x => x.kind === 'task').map(x => x.text)
+    expect(tasks).toEqual(['第一问', '第二问'])
+    expect(req2.history && req2.history.length).toBeGreaterThan(0)
+    expect(JSON.stringify(req2.history)).toContain('第一问')
+    chunkCb!({ runId: req2.runId, type: 'text', text: '回答二' })
+    chunkCb!({ runId: req2.runId, type: 'done', history: [{ role: 'user', content: '第一问' }, { role: 'assistant', content: '回答一' }, { role: 'user', content: '第二问' }, { role: 'assistant', content: '回答二' }] })
+    await new Promise(r => setTimeout(r, 60))
+    expect(saved.length).toBe(1)
+    expect(saved[0].steps.filter(x => x.kind === 'task').length).toBe(2)
   })
 
   it('deleteSession 删除历史', async () => {

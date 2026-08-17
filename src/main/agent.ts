@@ -85,11 +85,11 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
   const send = (ev: AgentEvent): void => { if (!win.isDestroyed()) win.webContents.send(IPC.AgentChunk, ev) }
   const mode: AgentPermissionMode = settings.agentPermissionMode ?? 'ask'
   void (async () => {
+    const messages: Array<Record<string, unknown>> = (req.history && req.history.length > 0)
+      ? [...req.history]
+      : [{ role: 'system', content: buildSystemPrompt(req.workdir, process.platform, mode) }]
+    messages.push({ role: 'user', content: req.task })
     try {
-      const messages: Array<Record<string, unknown>> = [
-        { role: 'system', content: buildSystemPrompt(req.workdir, process.platform, mode) },
-        { role: 'user', content: req.task }
-      ]
       for (let turn = 0; turn < MAX_TURNS; turn++) {
         send({ runId: req.runId, type: 'thinking' })
         const res = await chatCompletionWithTools({
@@ -140,17 +140,17 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
           const content = res.content ?? ''
           messages.push({ role: 'assistant', content })
           send({ runId: req.runId, type: 'text', text: content })
-          send({ runId: req.runId, type: 'done', usage: res.usage })
+          send({ runId: req.runId, type: 'done', usage: res.usage, history: messages })
           return
         }
       }
-      send({ runId: req.runId, type: 'error', message: '已达到最大执行步数（' + MAX_TURNS + '），已停止' })
+      send({ runId: req.runId, type: 'error', message: '已达到最大执行步数（' + MAX_TURNS + '），已停止', history: messages })
     } catch (err) {
       const e = err as Error
       if (e && e.name === 'AbortError') {
-        send({ runId: req.runId, type: 'done', message: '已停止' })
+        send({ runId: req.runId, type: 'done', message: '已停止', history: messages })
       } else {
-        send({ runId: req.runId, type: 'error', message: e && e.message ? e.message : '未知错误' })
+        send({ runId: req.runId, type: 'error', message: e && e.message ? e.message : '未知错误', history: messages })
       }
     } finally {
       controllers.delete(req.runId)

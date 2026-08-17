@@ -13,6 +13,7 @@ export interface AgentRunRequest {
   workdir: string
   task: string
   temperature: number
+  history?: Array<Record<string, unknown>>
 }
 
 export interface AgentToolResult {
@@ -37,6 +38,7 @@ export interface AgentEvent {
   cwd?: string
   target?: string
   reason?: string
+  history?: Array<Record<string, unknown>>
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }
 }
 
@@ -62,4 +64,5 @@ export interface AgentSession {
   createdAt: number
   updatedAt: number
   steps: AgentStep[]
+  history: Array<Record<string, unknown>>
 }
