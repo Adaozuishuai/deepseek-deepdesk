@@ -5,8 +5,51 @@ import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
 import clsx from 'clsx'
+import { formatTokens } from '../../lib/format'
 import Markdown from '../chat/Markdown'
 import '../../assets/agent.css'
+
+function estimateTokens(history: Array<Record<string, unknown>>): number {
+  let chars = 0
+  for (const m of history) {
+    if (typeof m.content === 'string') chars += m.content.length
+    if (Array.isArray(m.tool_calls)) {
+      for (const tc of m.tool_calls as Array<Record<string, unknown>>) {
+        const fn = tc.function as Record<string, unknown> | undefined
+        if (fn && typeof fn.arguments === 'string') chars += fn.arguments.length
+      }
+    }
+  }
+  return Math.max(1, Math.round(chars / 4))
+}
+
+function ContextMeter({ history, contextWindow }: { history: Array<Record<string, unknown>>; contextWindow: number }) {
+  const [open, setOpen] = useState(false)
+  const used = estimateTokens(history)
+  const percent = Math.min(100, Math.round(used / contextWindow * 100))
+  const RADIUS = 5.5
+  const CIRC = 2 * Math.PI * RADIUS
+  return (
+    <span className='ctx-meter'>
+      <button className='ctx-trigger' onClick={() => setOpen(o => !o)} title='上下文用量'>
+        <svg viewBox='0 0 14 14' width='14' height='14' aria-hidden>
+          <circle className='ctx-track' cx='7' cy='7' r={RADIUS} />
+          <circle className='ctx-fill' cx='7' cy='7' r={RADIUS} strokeDasharray={CIRC * percent / 100 + ' ' + CIRC} transform='rotate(-90 7 7)' />
+        </svg>
+      </button>
+      {open && (
+        <div className='ctx-panel'>
+          <div className='ctx-header'>
+            <span>上下文已用</span>
+            <span className='ctx-percent'>{percent}%</span>
+            <span className='ctx-figures'>~{formatTokens(used)} / {formatTokens(contextWindow)}</span>
+          </div>
+          <div className='ctx-bar'><div className='ctx-bar-fill' style={{ width: percent + '%' }} /></div>
+        </div>
+      )}
+    </span>
+  )
+}
 
 function parseArgs(args?: string): Record<string, unknown> {
   if (!args) return {}
@@ -56,6 +99,7 @@ export default function AgentView() {
   const workdir = useAgentStore(s => s.workdir)
   const pendingApproval = useAgentStore(s => s.pendingApproval)
   const error = useAgentStore(s => s.error)
+  const history = useAgentStore(s => s.history)
   const start = useAgentStore(s => s.start)
   const stop = useAgentStore(s => s.stop)
   const approve = useAgentStore(s => s.approve)
@@ -69,6 +113,7 @@ export default function AgentView() {
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const provider = providers.find(p => p.id === (settings?.defaultProviderId ?? 'deepseek'))
+  const contextWindow = provider?.models.find(m => m.id === (settings?.defaultModelId ?? ''))?.contextWindow ?? 128000
   const mode = settings?.agentPermissionMode ?? 'ask'
   const modeLabel = mode === 'full' ? '完全访问' : mode === 'auto' ? '替我审批' : '每次询问'
   const cycleMode = (): void => {
@@ -155,6 +200,7 @@ export default function AgentView() {
               )}
             </div>
             <div className='composer-right'>
+              <ContextMeter history={history} contextWindow={contextWindow} />
               <select className='composer-select' value={settings?.defaultModelId ?? ''} onChange={e => void updateSettings({ defaultModelId: e.target.value })} title='选择模型'>
                 {(provider?.models ?? []).map(m => <option key={m.id} value={m.id}>{m.name ?? m.id}</option>)}
               </select>
