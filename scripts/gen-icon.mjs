@@ -11,7 +11,7 @@ if (!m) throw new Error('whale path not found')
 const whale = m[1]
 
 function icon(size) {
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 50 50"><rect width="50" height="50" rx="11" fill="#4D6BFE"/><g transform="translate(7.5 7.5) scale(0.7)"><path d="' + whale + '" fill="#ffffff" fill-rule="nonzero"/></g></svg>'
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 50 50"><rect width="50" height="50" rx="11" fill="#ffffff"/><g transform="translate(7.5 7.5) scale(0.7)"><path d="' + whale + '" fill="#000000" fill-rule="nonzero"/></g></svg>'
   const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: size } })
   return resvg.render().asPng()
 }
