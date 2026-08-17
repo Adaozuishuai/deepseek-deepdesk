@@ -31,7 +31,7 @@ describe('uid', () => {
 describe('formatTokens', () => {
   it('千分位格式化', () => {
     expect(formatTokens(500)).toBe('500')
-    expect(formatTokens(1500)).toBe('1.5k')
+    expect(formatTokens(1500)).toBe('1.5K')
     expect(formatTokens(undefined)).toBe('')
   })
 })
