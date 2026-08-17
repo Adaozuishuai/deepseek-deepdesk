@@ -22,7 +22,7 @@
 .ctx-bar { display: flex; margin: 10px 0 2px; height: 4px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
 .ctx-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
 .agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 22px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
-.agent-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.agent-composer:focus-within { border-color: var(--border-strong); }
 
 .agent-task { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); border: 1px solid rgba(77, 107, 254, 0.25); font-size: var(--fs-base); line-height: 1.6; user-select: text; }
 .agent-task svg { margin-top: 2px; flex-shrink: 0; color: var(--accent-text); }
