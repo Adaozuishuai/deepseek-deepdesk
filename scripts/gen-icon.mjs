@@ -21,12 +21,6 @@ function inRoundedRect(x, y, x0, y0, w, h, r) {
   return dx * dx + dy * dy <= r * r
 }
 
-function inCircle(x, y, cx, cy, r) {
-  const dx = x - cx
-  const dy = y - cy
-  return dx * dx + dy * dy <= r * r
-}
-
 for (let y = 0; y < SIZE; y++) {
   for (let x = 0; x < SIZE; x++) {
     const i = (y * SIZE + x) * 4

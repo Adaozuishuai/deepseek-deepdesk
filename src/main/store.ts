@@ -59,7 +59,7 @@ export class AppStore {
 
   private migrate(parsed: Partial<AppState>): AppState {
     const raw = parsed.settings as (Partial<AppSettings> & { agentAutoApprove?: boolean }) | undefined
-    const settings: AppSettings = { ...DEFAULT_SETTINGS, ...(raw ?? {}) }
+    const settings: AppSettings = { ...DEFAULT_SETTINGS, ...raw }
     if (raw?.agentAutoApprove === true && settings.agentPermissionMode === 'ask') {
       settings.agentPermissionMode = 'auto'
     }

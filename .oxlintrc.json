@@ -1,0 +1,11 @@
+{
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "out/**",
+    "release/**",
+    "node_modules/**",
+    "build/**"
+  ]
+}

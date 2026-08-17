@@ -7,6 +7,10 @@
   "author": "DeepDesk Team",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
@@ -14,6 +18,8 @@
     "build": "electron-vite build",
     "smoke": "electron-vite build && electron . --smoke-test",
     "test": "vitest run",
+    "lint": "oxlint src scripts tests",
+    "lint:fix": "oxlint --fix src scripts tests",
     "gen:icon": "node scripts/gen-icon.mjs",
     "package:win": "electron-vite build && electron-builder --win",
     "package:mac": "electron-vite build && electron-builder --mac",
@@ -39,6 +45,7 @@
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^3.0.0",
+    "oxlint": "^1.78.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
