@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Plus, Settings, Search, Trash2, Pencil, MessageSquare, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Plus, Settings, Search, Trash2, Pencil, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import DeepSeekLogo from '../DeepSeekLogo'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import { formatTime } from '../../lib/format'
@@ -46,7 +47,7 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
         <>
           <div className='sidebar-header'>
             <div className='brand'>
-              <div className='brand-logo'><MessageSquare size={14} /></div>
+              <div className='brand-logo'><DeepSeekLogo width={22} height={22} /></div>
               DeepDesk
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
