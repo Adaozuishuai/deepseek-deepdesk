@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock, History } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
 import clsx from 'clsx'
+import { formatTime } from '../../lib/format'
 import '../../assets/agent.css'
 
 function parseArgs(args?: string): Record<string, unknown> {
@@ -60,7 +61,11 @@ export default function AgentView() {
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
+  const sessions = useAgentStore(s => s.sessions)
+  const loadSession = useAgentStore(s => s.loadSession)
+  const deleteSession = useAgentStore(s => s.deleteSession)
   const [text, setText] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
@@ -110,6 +115,23 @@ export default function AgentView() {
           </div>
         </div>
       )}
+      {showHistory && (
+        <div className='agent-history'>
+          <div className='agent-history-head'>
+            <span>历史会话（{sessions.length}）</span>
+            <button className='icon-btn' onClick={() => setShowHistory(false)}><X size={14} /></button>
+          </div>
+          {sessions.length === 0 ? (
+            <div className='muted' style={{ fontSize: 12, padding: '10px 12px' }}>暂无历史会话，完成一个任务后会自动保存</div>
+          ) : sessions.map(s => (
+            <div key={s.id} className='agent-history-item'>
+              <div className='agent-history-task' onClick={() => { loadSession(s.id); setShowHistory(false) }} title={s.task}>{s.task}</div>
+              <span className='conv-time'>{formatTime(s.updatedAt)}</span>
+              <button className='icon-btn' title='删除' onClick={() => void deleteSession(s.id)}><Trash2 size={12} /></button>
+            </div>
+          ))}
+        </div>
+      )}
       {steps.length === 0 ? (
         <div className='agent-empty'>
           <div className='empty-orb'><Sparkles size={30} /></div>
@@ -145,6 +167,7 @@ export default function AgentView() {
             <button className='model-pill' onClick={() => void pickDirectory()} title='选择工作目录'>
               <FolderOpen size={13} /><span className='name'>{workdir || '选择工作目录'}</span>
             </button>
+            <button className='icon-btn' title='历史会话' onClick={() => setShowHistory(o => !o)}><History size={15} /></button>
             <div className='composer-hint'>{modelLabel}</div>
             {steps.length > 0 && !running && (
               <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>

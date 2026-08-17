@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import type { DeepDeskApi } from '../shared/api'
-import type { AgentEvent, AgentRunRequest } from '../shared/agent-types'
+import type { AgentEvent, AgentRunRequest, AgentSession } from '../shared/agent-types'
 import type { AppSettings, ChatChunkPayload, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
 
 const api: DeepDeskApi = {
@@ -35,6 +35,9 @@ const api: DeepDeskApi = {
     cancel: (runId: string) => ipcRenderer.invoke(IPC.AgentCancel, runId) as Promise<void>,
     approve: (callId: string, approved: boolean) => ipcRenderer.invoke(IPC.AgentApprove, callId, approved) as Promise<void>,
     pickDirectory: () => ipcRenderer.invoke(IPC.AgentPickDirectory) as Promise<string | null>,
+    listSessions: () => ipcRenderer.invoke(IPC.AgentSessionsList) as Promise<AgentSession[]>,
+    saveSession: (session: AgentSession) => ipcRenderer.invoke(IPC.AgentSessionUpsert, session) as Promise<void>,
+    deleteSession: (id: string) => ipcRenderer.invoke(IPC.AgentSessionDelete, id) as Promise<void>,
     onChunk: (cb: (event: AgentEvent) => void) => {
       const listener = (_event: unknown, event: AgentEvent): void => cb(event)
       ipcRenderer.on(IPC.AgentChunk, listener)

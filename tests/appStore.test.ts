@@ -53,6 +53,16 @@ describe('AppStore', () => {
     expect(store.getConversation('c1')).toBeNull()
   })
 
+  it('Agent 会话增删', async () => {
+    const store = new AppStore(dir)
+    await store.init()
+    store.upsertAgentSession({ id: 's1', task: '任务', workdir: dir, modelId: 'deepseek-v4-pro', createdAt: 1, updatedAt: 1, steps: [{ kind: 'task', text: '任务' }] })
+    expect(store.getSnapshot().agentSessions.length).toBe(1)
+    expect(store.getSnapshot().agentSessions[0].task).toBe('任务')
+    store.deleteAgentSession('s1')
+    expect(store.getSnapshot().agentSessions.length).toBe(0)
+  })
+
   it('删除默认提供商后回退到首个', async () => {
     const store = new AppStore(dir)
     await store.init()

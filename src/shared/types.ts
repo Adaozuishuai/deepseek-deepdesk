@@ -1,3 +1,5 @@
+import type { AgentSession } from './agent-types'
+
 export type Theme = 'dark' | 'light' | 'system'
 
 export type AgentPermissionMode = 'ask' | 'auto' | 'full'
@@ -59,6 +61,7 @@ export interface AppState {
   settings: AppSettings
   providers: ProviderConfig[]
   conversations: Conversation[]
+  agentSessions: AgentSession[]
 }
 
 export type ChatChunkType = 'start' | 'content' | 'reasoning' | 'done' | 'error'

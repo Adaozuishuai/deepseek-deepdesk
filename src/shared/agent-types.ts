@@ -53,3 +53,13 @@ export interface AgentStep {
   result?: string
   message?: string
 }
+
+export interface AgentSession {
+  id: string
+  task: string
+  workdir: string
+  modelId: string
+  createdAt: number
+  updatedAt: number
+  steps: AgentStep[]
+}

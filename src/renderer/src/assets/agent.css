@@ -32,6 +32,13 @@
 .agent-approval-cwd { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
 .agent-approval-actions { display: flex; gap: 8px; }
 
+.agent-history { margin: 10px 24px 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); overflow: hidden; max-height: 300px; display: flex; flex-direction: column; animation: msgIn 0.18s ease; }
+.agent-history-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.agent-history-scroll { overflow-y: auto; }
+.agent-history-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.agent-history-item:hover { background: var(--bg-hover); }
+.agent-history-task { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+
 .sidebar-modes { display: flex; margin: 0 12px 4px; padding: 3px; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 10px; gap: 2px; }
 .mode-tab { flex: 1; padding: 5px 0; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; border: none; background: transparent; transition: all 0.13s ease; }
 .mode-tab:hover { color: var(--text); }

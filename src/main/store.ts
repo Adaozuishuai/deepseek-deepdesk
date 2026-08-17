@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { AppState, AppSettings, ProviderConfig, Conversation } from '../shared/types'
+import type { AgentSession } from '../shared/agent-types'
 import { BUILTIN_PROVIDERS } from '../shared/llm/providers'
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -33,7 +34,8 @@ export class AppStore {
     this.data = {
       settings: { ...DEFAULT_SETTINGS },
       providers: cloneProviders(),
-      conversations: []
+      conversations: [],
+      agentSessions: []
     }
   }
 
@@ -50,6 +52,7 @@ export class AppStore {
     }
     if (!this.data.settings) this.data.settings = { ...DEFAULT_SETTINGS }
     if (!this.data.conversations) this.data.conversations = []
+    if (!this.data.agentSessions) this.data.agentSessions = []
     this.migrateDeepSeekV4()
     await this.persist()
   }
@@ -62,7 +65,8 @@ export class AppStore {
     }
     const providers = Array.isArray(parsed.providers) ? parsed.providers : []
     const conversations = Array.isArray(parsed.conversations) ? parsed.conversations : []
-    return { settings, providers, conversations }
+    const agentSessions = Array.isArray(parsed.agentSessions) ? parsed.agentSessions : []
+    return { settings, providers, conversations, agentSessions }
   }
 
   private migrateDeepSeekV4(): void {
@@ -131,6 +135,23 @@ export class AppStore {
 
   clearConversations(): void {
     this.data.conversations = []
+    this.persist()
+  }
+
+  upsertAgentSession(session: AgentSession): void {
+    const idx = this.data.agentSessions.findIndex(s => s.id === session.id)
+    if (idx >= 0) this.data.agentSessions[idx] = structuredClone(session)
+    else this.data.agentSessions.push(structuredClone(session))
+    this.persist()
+  }
+
+  deleteAgentSession(id: string): void {
+    this.data.agentSessions = this.data.agentSessions.filter(s => s.id !== id)
+    this.persist()
+  }
+
+  clearAgentSessions(): void {
+    this.data.agentSessions = []
     this.persist()
   }
 

@@ -4,7 +4,7 @@ import { startChat, cancelChat } from './llm'
 import { startAgent, cancelAgent, approveCommand } from './agent'
 import type { AppStore } from './store'
 import type { AppSettings, ChatStartRequest, Conversation, ProviderConfig, ProviderTestResult } from '../shared/types'
-import type { AgentRunRequest } from '../shared/agent-types'
+import type { AgentRunRequest, AgentSession } from '../shared/agent-types'
 
 export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.SettingsGet, () => store.getSnapshot().settings)
@@ -90,6 +90,16 @@ export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | nu
 
   ipcMain.handle(IPC.AgentApprove, (_event, callId: string, approved: boolean) => {
     approveCommand(callId, approved)
+  })
+
+  ipcMain.handle(IPC.AgentSessionsList, () => store.getSnapshot().agentSessions)
+
+  ipcMain.handle(IPC.AgentSessionUpsert, (_event, session: AgentSession) => {
+    store.upsertAgentSession(session)
+  })
+
+  ipcMain.handle(IPC.AgentSessionDelete, (_event, id: string) => {
+    store.deleteAgentSession(id)
   })
 
   ipcMain.handle(IPC.AgentPickDirectory, async (event) => {
