@@ -12,6 +12,7 @@ type View = 'chat' | 'settings'
 export default function App() {
   const ready = useSettingsStore(s => s.loaded)
   const [view, setView] = useState<View>('chat')
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     void useSettingsStore.getState().load()
@@ -67,7 +68,7 @@ export default function App() {
     <div className='app-shell'>
       <TitleBar view={view} />
       <div className='app-body'>
-        <Sidebar view={view} onOpenSettings={() => setView('settings')} />
+        <Sidebar view={view} onOpenSettings={() => setView('settings')} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(c => !c)} />
         <main className='app-main'>
           {view === 'chat' ? <AgentView /> : <SettingsView onBack={() => setView('chat')} />}
         </main>
