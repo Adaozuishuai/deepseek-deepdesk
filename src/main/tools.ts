@@ -19,6 +19,26 @@ export function resolveInWorkdir(workdir: string, p: string): string {
   return r.abs
 }
 
+function psQuote(s: string): string {
+  const q = String.fromCharCode(39)
+  return q + s.replace(/'/g, q + q) + q
+}
+
+function runLarkCli(args: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise(resolve => {
+    exec(args, {
+      shell: 'powershell.exe',
+      timeout: 120000,
+      maxBuffer: 4 * 1024 * 1024,
+      windowsHide: true,
+      env: { ...process.env, LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1', LARKSUITE_CLI_NO_SKILLS_NOTIFIER: '1' }
+    }, (err, stdout, stderr) => {
+      const code = err ? (typeof err.code === 'number' ? err.code : 1) : 0
+      resolve({ stdout: String(stdout ?? ''), stderr: String(stderr ?? ''), code })
+    })
+  })
+}
+
 export function toolTargetPaths(call: AgentToolCall): string[] {
   switch (call.name) {
     case 'read_file':
@@ -121,6 +141,35 @@ export async function executeTool(call: AgentToolCall, workdir: string, allowOut
       await walk(root)
       const content = matches.slice(0, 200).join('\n') || '未找到匹配内容'
       return { ok: true, content: truncate(content), summary: matches.length + ' 处匹配' }
+    }
+    case 'search_feishu_user': {
+      const name = String(a.name ?? '').trim()
+      if (!name) return { ok: false, content: '缺少 name 参数', summary: '缺少姓名' }
+      const cmd = 'lark-cli contact +search-user --query ' + psQuote(name) + ' --exclude-external-users --as user'
+      const r = await runLarkCli(cmd)
+      try {
+        const j = JSON.parse(r.stdout.trim()) as { data?: { users?: Array<{ open_id?: string; localized_name?: string; department?: string }> } }
+        const users = (j.data?.users ?? []).map(u => ({ open_id: u.open_id ?? '', name: u.localized_name ?? '', department: u.department || '（无部门）' }))
+        if (users.length === 0) return { ok: true, content: '未找到「' + name + '」', summary: '0 人' }
+        const content = users.map(u => u.name + ' | 部门: ' + u.department + ' | open_id: ' + u.open_id).join('\n')
+        return { ok: true, content, summary: users.length + ' 人' }
+      } catch {
+        return { ok: false, content: '解析 lark-cli 输出失败: ' + r.stdout.slice(0, 500), summary: '解析失败' }
+      }
+    }
+    case 'send_feishu_message': {
+      const user_id = String(a.user_id ?? '').trim()
+      const text = String(a.text ?? '')
+      if (!user_id || !text) return { ok: false, content: '缺少 user_id 或 text 参数', summary: '缺少参数' }
+      const cmd = 'lark-cli im +messages-send --user-id ' + psQuote(user_id) + ' --text ' + psQuote(text) + ' --as user'
+      const r = await runLarkCli(cmd)
+      try {
+        const j = JSON.parse(r.stdout.trim()) as { ok?: boolean; data?: { message_id?: string }; error?: { message?: string } }
+        if (j.ok) return { ok: true, content: '消息已发送，message_id=' + (j.data?.message_id ?? ''), summary: '已发送给 ' + user_id }
+        return { ok: false, content: '发送失败: ' + (j.error?.message ?? JSON.stringify(j)), summary: '发送失败' }
+      } catch {
+        return { ok: false, content: '发送异常: ' + r.stdout.slice(0, 500), summary: '发送异常' }
+      }
     }
     default:
       return { ok: false, content: '未知工具: ' + call.name, summary: '未知工具' }

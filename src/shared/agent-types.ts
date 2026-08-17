@@ -1,4 +1,4 @@
-export type AgentToolName = 'run_command' | 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'search_content'
+export type AgentToolName = 'run_command' | 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'search_content' | 'search_feishu_user' | 'send_feishu_message'
 
 export interface AgentToolCall {
   id: string

@@ -26,6 +26,7 @@ function buildSystemPrompt(workdir: string, platform: string, mode: AgentPermiss
     , '3. 命令在 PowerShell 中执行（Windows）。'
     , '4. 边做边用简短的话汇报进度；最终给出总结。'
     , '5. 无法完成或信息不足就直说，不要编造。'
+    , '6. 如需通知他人，先用 search_feishu_user 按姓名查 open_id，再用 send_feishu_message 发飞书消息。'
     , ''
     , '工作目录：' + workdir
     , '操作系统：' + platform
@@ -34,6 +35,12 @@ function buildSystemPrompt(workdir: string, platform: string, mode: AgentPermiss
 }
 
 function evaluatePermission(call: AgentToolCall, workdir: string, mode: AgentPermissionMode): { needsApproval: boolean; reason: string; allowOutside: boolean } {
+  if (call.name === 'send_feishu_message') {
+    return { needsApproval: mode !== 'full', reason: '发送飞书消息', allowOutside: false }
+  }
+  if (call.name === 'search_feishu_user') {
+    return { needsApproval: false, reason: '搜索飞书通讯录', allowOutside: false }
+  }
   if (call.name === 'run_command') {
     const command = String(call.args.command ?? '')
     const dangerous = isDangerousCommand(command)
@@ -110,6 +117,9 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
               if (call.name === 'run_command') {
                 approval.command = String(call.args.command ?? '')
                 approval.cwd = call.args.cwd ? String(call.args.cwd) : req.workdir
+              } else if (call.name === 'send_feishu_message') {
+                approval.command = String(call.args.text ?? '')
+                approval.target = String(call.args.user_id ?? '')
               } else {
                 approval.target = String(call.args.path ?? '')
               }

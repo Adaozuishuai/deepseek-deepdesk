@@ -86,5 +86,34 @@ export const AGENT_TOOLS: Array<Record<string, unknown>> = [
         required: ['pattern']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_feishu_user',
+      description: '按姓名在飞书通讯录中搜索同事，返回候选人的姓名、部门与 open_id',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: '同事姓名' }
+        },
+        required: ['name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'send_feishu_message',
+      description: '给指定同事发送一条飞书文本消息（需要 open_id，先用 search_feishu_user 查询）',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: '接收人的 open_id（ou_ 开头）' },
+          text: { type: 'string', description: '要发送的文本内容' }
+        },
+        required: ['user_id', 'text']
+      }
+    }
   }
 ]

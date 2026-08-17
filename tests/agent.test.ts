@@ -134,6 +134,24 @@ describe('startAgent', () => {
     rmSync(outsideDir, { recursive: true, force: true })
   })
 
+  it('send_feishu_message 默认需批准，拒绝后不发送', async () => {
+    mocks.chatCompletionWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c8', name: 'send_feishu_message', args: { user_id: 'ou_test', text: '你好' } }] })
+      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    const { events, win } = makeWin()
+    startAgent(win as never, { runId: 'r8', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '发消息', temperature: 1 }, provider, baseSettings)
+    const approval = await waitForApproval(events)
+    expect(approval).toBeTruthy()
+    expect(approval?.reason).toBe('发送飞书消息')
+    expect(approval?.command).toBe('你好')
+    expect(approval?.target).toBe('ou_test')
+    approveCommand(approval!.callId!, false)
+    await runUntilDone(events)
+    const tr = events.find(e => e.type === 'tool_result')
+    expect(tr?.ok).toBe(false)
+    expect(tr?.summary).toContain('拒绝')
+  })
+
   it('full 模式：写工作目录外文件直接放行', async () => {
     const outsideDir = mkdtempSync(join(tmpdir(), 'agent-outside-'))
     const outsideFile = join(outsideDir, 'w.txt')
