@@ -38,6 +38,7 @@ const api: DeepDeskApi = {
     listSessions: () => ipcRenderer.invoke(IPC.AgentSessionsList) as Promise<AgentSession[]>,
     saveSession: (session: AgentSession) => ipcRenderer.invoke(IPC.AgentSessionUpsert, session) as Promise<void>,
     deleteSession: (id: string) => ipcRenderer.invoke(IPC.AgentSessionDelete, id) as Promise<void>,
+    renameSession: (id: string, title: string) => ipcRenderer.invoke(IPC.AgentSessionRename, id, title) as Promise<void>,
     onChunk: (cb: (event: AgentEvent) => void) => {
       const listener = (_event: unknown, event: AgentEvent): void => cb(event)
       ipcRenderer.on(IPC.AgentChunk, listener)

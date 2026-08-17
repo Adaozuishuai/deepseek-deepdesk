@@ -23,6 +23,7 @@ interface AgentState {
   pickDirectory: () => Promise<void>
   loadSession: (id: string) => void
   deleteSession: (id: string) => Promise<void>
+  renameSession: (id: string, title: string) => Promise<void>
   clear: () => void
 }
 
@@ -141,6 +142,12 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     deleteSession: async (id) => {
       await window.api.agent.deleteSession(id)
       set({ sessions: get().sessions.filter(x => x.id !== id) })
+    },
+    renameSession: async (id, title) => {
+      const t = title.trim()
+      if (!t) return
+      await window.api.agent.renameSession(id, t)
+      set({ sessions: get().sessions.map(s => (s.id === id ? { ...s, task: t } : s)) })
     },
     clear: () => {
       if (get().running) get().stop()

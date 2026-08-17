@@ -102,6 +102,10 @@ export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | nu
     store.deleteAgentSession(id)
   })
 
+  ipcMain.handle(IPC.AgentSessionRename, (_event, id: string, title: string) => {
+    store.renameAgentSession(id, title)
+  })
+
   ipcMain.handle(IPC.AgentPickDirectory, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return null
