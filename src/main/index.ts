@@ -52,7 +52,12 @@ if (!gotLock) {
     if (process.platform !== 'darwin') app.quit()
   })
 
-  app.on('before-quit', () => {
+  let isQuitting = false
+  app.on('before-quit', (event) => {
     cancelAllChats()
+    if (isQuitting) return
+    event.preventDefault()
+    isQuitting = true
+    void store.flush().finally(() => app.quit())
   })
 }
