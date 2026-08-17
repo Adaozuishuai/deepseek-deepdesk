@@ -5,6 +5,7 @@ import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
 import clsx from 'clsx'
+import Markdown from '../chat/Markdown'
 import '../../assets/agent.css'
 
 function parseArgs(args?: string): Record<string, unknown> {
@@ -42,7 +43,7 @@ function StepItem({ step }: { step: AgentStep }) {
   switch (step.kind) {
     case 'task': return <div className='agent-task'><Bot size={14} /><span>{step.text}</span></div>
     case 'thinking': return <div className='agent-thinking'><span className='thinking-icon' />思考中…</div>
-    case 'text': return <div className='agent-text'>{step.text}</div>
+    case 'text': return <Markdown text={step.text ?? ''} />
     case 'tool': return <ToolCard step={step} />
     case 'error': return <div className='agent-error'>{step.message}</div>
     default: return null
@@ -131,6 +132,17 @@ export default function AgentView() {
         </div>
       )}
       <div className='agent-footer'>
+        <div className='agent-toolbar'>
+          <button className='toolbar-item' onClick={cycleMode} title='权限模式（点击切换）'>
+            {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
+            <span>{modeLabel}</span>
+          </button>
+          <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
+            <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
+          </button>
+          <span className='toolbar-spacer' />
+          <span className='toolbar-model'>{modelLabel}</span>
+        </div>
         <div className='agent-composer'>
           <textarea
             ref={taRef}
@@ -142,14 +154,6 @@ export default function AgentView() {
             rows={1}
           />
           <div className='composer-actions'>
-            <button className='model-pill' onClick={cycleMode} title={'权限模式：' + modeLabel + '（点击切换）'}>
-              {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
-              <span className='name'>{modeLabel}</span>
-            </button>
-            <button className='model-pill' onClick={() => void pickDirectory()} title='选择工作目录'>
-              <FolderOpen size={13} /><span className='name'>{workdir || '选择工作目录'}</span>
-            </button>
-            <div className='composer-hint'>{modelLabel}</div>
             {steps.length > 0 && !running && (
               <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>
             )}
