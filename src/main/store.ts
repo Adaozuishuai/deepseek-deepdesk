@@ -150,6 +150,15 @@ export class AppStore {
     this.persist()
   }
 
+  renameAgentSession(id: string, title: string): void {
+    const s = this.data.agentSessions.find(x => x.id === id)
+    if (s) {
+      s.task = title
+      s.updatedAt = Date.now()
+      this.persist()
+    }
+  }
+
   clearAgentSessions(): void {
     this.data.agentSessions = []
     this.persist()

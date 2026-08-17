@@ -11,10 +11,13 @@ export default function Sidebar({ view, onOpenSettings }: { view: string; onOpen
   const loadSession = useAgentStore(s => s.loadSession)
   const deleteSession = useAgentStore(s => s.deleteSession)
   const clear = useAgentStore(s => s.clear)
+  const renameSession = useAgentStore(s => s.renameSession)
   const providers = useSettingsStore(s => s.providers)
   const settings = useSettingsStore(s => s.settings)
   const [query, setQuery] = useState('')
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameText, setRenameText] = useState('')
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -24,6 +27,12 @@ export default function Sidebar({ view, onOpenSettings }: { view: string; onOpen
 
   const currentProvider = providers.find(p => p.id === (settings?.defaultProviderId ?? ''))
   const configured = currentProvider ? currentProvider.apiKey.length > 0 : false
+
+  const commitRename = (id: string): void => {
+    const t = renameText.trim()
+    if (t) void renameSession(id, t)
+    setRenamingId(null)
+  }
 
   return (
     <aside className='sidebar'>
@@ -51,7 +60,11 @@ export default function Sidebar({ view, onOpenSettings }: { view: string; onOpen
         )}
         {filtered.map(s => (
           <div key={s.id} className={clsx('conv-item', activeSessionId === s.id && view === 'chat' && 'active')} onClick={() => loadSession(s.id)}>
-            <div className='conv-title'>{s.task}</div>
+            {renamingId === s.id ? (
+              <input className='input' style={{ height: 24, padding: '0 6px' }} autoFocus value={renameText} onChange={e => setRenameText(e.target.value)} onClick={e => e.stopPropagation()} onBlur={() => commitRename(s.id)} onKeyDown={e => { if (e.key === 'Enter') commitRename(s.id); if (e.key === 'Escape') setRenamingId(null) }} />
+            ) : (
+              <div className='conv-title' title='双击重命名' onDoubleClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }}>{s.task}</div>
+            )}
             <div className='conv-time'>{formatTime(s.updatedAt)}</div>
             {confirmId === s.id ? (
               <div className='conv-del confirm' onClick={e => { e.stopPropagation(); void deleteSession(s.id); setConfirmId(null) }}>确认</div>

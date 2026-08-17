@@ -32,6 +32,7 @@ export interface DeepDeskApi {
     listSessions: () => Promise<AgentSession[]>
     saveSession: (session: AgentSession) => Promise<void>
     deleteSession: (id: string) => Promise<void>
+    renameSession: (id: string, title: string) => Promise<void>
   }
   window: {
     minimize: () => Promise<void>

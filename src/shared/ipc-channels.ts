@@ -20,6 +20,7 @@ export const IPC = {
   AgentSessionsList: 'agent:sessions:list',
   AgentSessionUpsert: 'agent:sessions:upsert',
   AgentSessionDelete: 'agent:sessions:delete',
+  AgentSessionRename: 'agent:sessions:rename',
   WindowMinimize: 'window:minimize',
   WindowToggleMaximize: 'window:toggle-maximize',
   WindowClose: 'window:close',

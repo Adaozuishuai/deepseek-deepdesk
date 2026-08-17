@@ -69,7 +69,6 @@ export default function AgentView() {
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const provider = providers.find(p => p.id === (settings?.defaultProviderId ?? 'deepseek'))
-  const modelLabel = provider?.models.find(m => m.id === (settings?.defaultModelId ?? ''))?.name ?? settings?.defaultModelId ?? ''
   const mode = settings?.agentPermissionMode ?? 'ask'
   const modeLabel = mode === 'full' ? '完全访问' : mode === 'auto' ? '替我审批' : '每次询问'
   const cycleMode = (): void => {
@@ -156,7 +155,9 @@ export default function AgentView() {
               )}
             </div>
             <div className='composer-right'>
-              <span className='toolbar-model'>{modelLabel}</span>
+              <select className='composer-select' value={settings?.defaultModelId ?? ''} onChange={e => void updateSettings({ defaultModelId: e.target.value })} title='选择模型'>
+                {(provider?.models ?? []).map(m => <option key={m.id} value={m.id}>{m.name ?? m.id}</option>)}
+              </select>
               {running ? (
                 <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
               ) : (
