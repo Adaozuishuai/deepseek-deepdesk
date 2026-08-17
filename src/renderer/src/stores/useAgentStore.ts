@@ -27,6 +27,38 @@ interface AgentState {
   clear: () => void
 }
 
+let textBuffer = ''
+let textTimer: number | null = null
+
+function flushTextBuffer(): void {
+  if (textTimer !== null) {
+    clearTimeout(textTimer)
+    textTimer = null
+  }
+  if (!textBuffer) return
+  const delta = textBuffer
+  textBuffer = ''
+  useAgentStore.setState(s => {
+    const steps = [...s.steps]
+    if (steps.length > 0 && steps[steps.length - 1].kind === 'thinking') steps.pop()
+    const last = steps[steps.length - 1]
+    if (last && last.kind === 'text') {
+      last.text = (last.text ?? '') + delta
+    } else {
+      steps.push({ kind: 'text', text: delta })
+    }
+    return { steps }
+  })
+}
+
+function scheduleTextFlush(): void {
+  if (textTimer !== null) return
+  textTimer = window.setTimeout(() => {
+    textTimer = null
+    flushTextBuffer()
+  }, 50)
+}
+
 export const useAgentStore = create<AgentState>()((set, get) => {
   function append(step: AgentStep): void {
     set(s => {
@@ -63,13 +95,13 @@ export const useAgentStore = create<AgentState>()((set, get) => {
   }
   function handleEvent(ev: AgentEvent): void {
     switch (ev.type) {
-      case 'thinking': append({ kind: 'thinking' }); break
-      case 'text': append({ kind: 'text', text: ev.text ?? '' }); break
-      case 'tool_call': append({ kind: 'tool', callId: ev.call?.id, name: ev.call?.name, args: JSON.stringify(ev.call?.args ?? {}, null, 2), status: 'running' }); break
-      case 'approval_request': set({ pendingApproval: { callId: ev.callId ?? '', command: ev.command ?? '', cwd: ev.cwd ?? '', target: ev.target ?? '', reason: ev.reason ?? '' } }); break
+      case 'thinking': flushTextBuffer(); append({ kind: 'thinking' }); break
+      case 'text': textBuffer += ev.text ?? ''; scheduleTextFlush(); break
+      case 'tool_call': flushTextBuffer(); append({ kind: 'tool', callId: ev.call?.id, name: ev.call?.name, args: JSON.stringify(ev.call?.args ?? {}, null, 2), status: 'running' }); break
+      case 'approval_request': flushTextBuffer(); set({ pendingApproval: { callId: ev.callId ?? '', command: ev.command ?? '', cwd: ev.cwd ?? '', target: ev.target ?? '', reason: ev.reason ?? '' } }); break
       case 'tool_result': updateTool(ev.callId ?? '', { status: ev.ok ? 'ok' : 'error', summary: ev.summary ?? '', result: ev.output ?? '' }); break
-      case 'done': set({ running: false, currentRunId: null, pendingApproval: null, history: ev.history ?? get().history }); saveCurrentSession(); break
-      case 'error': append({ kind: 'error', message: ev.message ?? '未知错误' }); set({ running: false, currentRunId: null, pendingApproval: null, history: ev.history ?? get().history }); saveCurrentSession(); break
+      case 'done': flushTextBuffer(); set({ running: false, currentRunId: null, pendingApproval: null, history: ev.history ?? get().history }); saveCurrentSession(); break
+      case 'error': flushTextBuffer(); append({ kind: 'error', message: ev.message ?? '未知错误' }); set({ running: false, currentRunId: null, pendingApproval: null, history: ev.history ?? get().history }); saveCurrentSession(); break
     }
   }
   return {

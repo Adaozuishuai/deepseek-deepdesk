@@ -3,10 +3,17 @@ import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const mocks = vi.hoisted(() => ({ chatCompletionWithTools: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  responses: [] as Array<{ content: string | null; toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }> }>
+}))
 
 vi.mock('../src/shared/llm/toolcall', () => ({
-  chatCompletionWithTools: mocks.chatCompletionWithTools
+  streamChatCompletionWithTools: async function* () {
+    const resp = mocks.responses.shift()
+    if (!resp) return
+    if (resp.content) yield { type: 'content', text: resp.content }
+    yield { type: 'final', toolCalls: resp.toolCalls }
+  }
 }))
 
 import { startAgent, approveCommand } from '../src/main/agent'
@@ -39,15 +46,14 @@ async function waitForApproval(events: AgentEvent[]): Promise<AgentEvent | undef
 }
 
 let dir: string
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'agent-test-')); mocks.chatCompletionWithTools.mockReset() })
+beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'agent-test-')); mocks.responses.length = 0 })
 afterEach(() => { rmSync(dir, { recursive: true, force: true }) })
 
 describe('startAgent', () => {
   it('工具调用循环：写文件后产出最终答案', async () => {
     const target = join(dir, 'hello.txt')
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'hello.txt', content: 'hello agent' } }] })
-      .mockResolvedValueOnce({ content: '已完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c1', name: 'write_file', args: { path: 'hello.txt', content: 'hello agent' } }] })
+    mocks.responses.push({ content: '已完成', toolCalls: [] })
     const { events, win } = makeWin()
     startAgent(win as never, { runId: 'r1', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '写个文件', temperature: 1 }, provider, baseSettings)
     await runUntilDone(events)
@@ -60,9 +66,8 @@ describe('startAgent', () => {
   })
 
   it('ask 模式：run_command 默认需批准，拒绝后不执行', async () => {
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c2', name: 'run_command', args: { command: 'Write-Output should-not-run' } }] })
-      .mockResolvedValueOnce({ content: '结束', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c2', name: 'run_command', args: { command: 'Write-Output should-not-run' } }] })
+    mocks.responses.push({ content: '结束', toolCalls: [] })
     const { events, win } = makeWin()
     startAgent(win as never, { runId: 'r2', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '跑命令', temperature: 1 }, provider, baseSettings)
     const approval = await waitForApproval(events)
@@ -75,9 +80,8 @@ describe('startAgent', () => {
   })
 
   it('full 模式：命令直接执行，无需批准', async () => {
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c3', name: 'run_command', args: { command: 'Write-Output auto-run-ok' } }] })
-      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c3', name: 'run_command', args: { command: 'Write-Output auto-run-ok' } }] })
+    mocks.responses.push({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
     const fullSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'full' }
     startAgent(win as never, { runId: 'r3', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '跑命令', temperature: 1 }, provider, fullSettings)
@@ -89,9 +93,8 @@ describe('startAgent', () => {
   })
 
   it('auto 模式：只读命令自动批准', async () => {
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c6', name: 'run_command', args: { command: 'Write-Output readonly-ok' } }] })
-      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c6', name: 'run_command', args: { command: 'Write-Output readonly-ok' } }] })
+    mocks.responses.push({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
     const autoSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'auto' }
     startAgent(win as never, { runId: 'r6', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '只读命令', temperature: 1 }, provider, autoSettings)
@@ -103,9 +106,8 @@ describe('startAgent', () => {
   })
 
   it('auto 模式：非只读命令仍需批准', async () => {
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c7', name: 'run_command', args: { command: 'New-Item -ItemType File foo.txt' } }] })
-      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c7', name: 'run_command', args: { command: 'New-Item -ItemType File foo.txt' } }] })
+    mocks.responses.push({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
     const autoSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'auto' }
     startAgent(win as never, { runId: 'r7', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '写文件', temperature: 1 }, provider, autoSettings)
@@ -119,9 +121,8 @@ describe('startAgent', () => {
     const outsideDir = mkdtempSync(join(tmpdir(), 'agent-outside-'))
     const outsideFile = join(outsideDir, 'secret.txt')
     writeFileSync(outsideFile, 'secret data')
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c4', name: 'read_file', args: { path: outsideFile } }] })
-      .mockResolvedValueOnce({ content: '结束', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c4', name: 'read_file', args: { path: outsideFile } }] })
+    mocks.responses.push({ content: '结束', toolCalls: [] })
     const { events, win } = makeWin()
     startAgent(win as never, { runId: 'r4', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '读外部文件', temperature: 1 }, provider, baseSettings)
     const approval = await waitForApproval(events)
@@ -135,9 +136,8 @@ describe('startAgent', () => {
   })
 
   it('send_feishu_message 默认需批准，拒绝后不发送', async () => {
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c8', name: 'send_feishu_message', args: { user_id: 'ou_test', text: '你好' } }] })
-      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c8', name: 'send_feishu_message', args: { user_id: 'ou_test', text: '你好' } }] })
+    mocks.responses.push({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
     startAgent(win as never, { runId: 'r8', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '发消息', temperature: 1 }, provider, baseSettings)
     const approval = await waitForApproval(events)
@@ -155,9 +155,8 @@ describe('startAgent', () => {
   it('full 模式：写工作目录外文件直接放行', async () => {
     const outsideDir = mkdtempSync(join(tmpdir(), 'agent-outside-'))
     const outsideFile = join(outsideDir, 'w.txt')
-    mocks.chatCompletionWithTools
-      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c5', name: 'write_file', args: { path: outsideFile, content: 'hi' } }] })
-      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    mocks.responses.push({ content: null, toolCalls: [{ id: 'c5', name: 'write_file', args: { path: outsideFile, content: 'hi' } }] })
+    mocks.responses.push({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
     const fullSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'full' }
     startAgent(win as never, { runId: 'r5', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '写外部文件', temperature: 1 }, provider, fullSettings)

@@ -70,3 +70,103 @@ export async function chatCompletionWithTools(req: ToolCallRequest): Promise<Too
   const usage = json.usage ? { promptTokens: json.usage.prompt_tokens, completionTokens: json.usage.completion_tokens, totalTokens: json.usage.total_tokens } : undefined
   return { content, toolCalls, usage }
 }
+
+export interface StreamContentChunk {
+  type: 'content'
+  text: string
+}
+
+export interface StreamFinalChunk {
+  type: 'final'
+  toolCalls: ToolCallItem[]
+  usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }
+}
+
+export type StreamChunk = StreamContentChunk | StreamFinalChunk
+
+export async function* streamChatCompletionWithTools(req: ToolCallRequest): AsyncGenerator<StreamChunk> {
+  let base = req.baseUrl.trim()
+  while (base.endsWith('/')) base = base.slice(0, -1)
+  const res = await fetch(base + '/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + req.apiKey
+    },
+    body: JSON.stringify({
+      model: req.model,
+      messages: req.messages,
+      tools: req.tools,
+      temperature: req.temperature ?? 1,
+      stream: true,
+      stream_options: { include_usage: true }
+    }),
+    signal: req.signal
+  })
+  if (!res.ok) {
+    let detail = ''
+    try {
+      detail = (await res.text()).slice(0, 600)
+    } catch {
+      detail = ''
+    }
+    throw new Error('HTTP ' + res.status + ': ' + (detail || res.statusText))
+  }
+  if (!res.body) throw new Error('响应为空')
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+  const tcMap = new Map<number, { id: string; name: string; args: string }>()
+  let usage: StreamFinalChunk['usage']
+  while (true) {
+    const r = await reader.read()
+    if (r.done) break
+    buffer += decoder.decode(r.value, { stream: true })
+    const parts = buffer.split('\n\n')
+    buffer = parts.pop() ?? ''
+    for (const part of parts) {
+      for (const line of part.split('\n')) {
+        if (!line.startsWith('data:')) continue
+        const data = line.slice(5).trim()
+        if (data === '' || data === '[DONE]') continue
+        try {
+          const json = JSON.parse(data) as {
+            choices?: Array<{ delta?: { content?: string; tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }> } }>
+            usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+          }
+          const delta = json.choices && json.choices[0] && json.choices[0].delta
+          if (delta) {
+            if (typeof delta.content === 'string' && delta.content !== '') {
+              yield { type: 'content', text: delta.content }
+            }
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0
+                const entry = tcMap.get(idx) ?? { id: '', name: '', args: '' }
+                if (tc.id) entry.id = tc.id
+                if (tc.function && tc.function.name) entry.name += tc.function.name
+                if (tc.function && tc.function.arguments) entry.args += tc.function.arguments
+                tcMap.set(idx, entry)
+              }
+            }
+          }
+          if (json.usage) {
+            usage = { promptTokens: json.usage.prompt_tokens, completionTokens: json.usage.completion_tokens, totalTokens: json.usage.total_tokens }
+          }
+        } catch {
+          // 跳过不完整分片
+        }
+      }
+    }
+  }
+  const toolCalls: ToolCallItem[] = [...tcMap.values()].map(e => {
+    let args: Record<string, unknown> = {}
+    try {
+      args = JSON.parse(e.args || '{}')
+    } catch {
+      args = {}
+    }
+    return { id: e.id || ('call-' + Math.random().toString(36).slice(2)), name: e.name, args }
+  })
+  yield { type: 'final', toolCalls, usage }
+}
