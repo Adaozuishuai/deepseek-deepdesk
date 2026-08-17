@@ -14,9 +14,9 @@
   --fs-lg: 15px;
   --fs-xl: 17px;
   --fs-2xl: 20px;
-  --bg: #0b0d12;
-  --bg-panel: #10131b;
-  --bg-elevated: #151a26;
+  --bg: #0e0e0e;
+  --bg-panel: #161616;
+  --bg-elevated: #1e1e1e;
   --bg-hover: rgba(255, 255, 255, 0.05);
   --bg-active: rgba(255, 255, 255, 0.08);
   --border: rgba(255, 255, 255, 0.07);
@@ -241,7 +241,7 @@ input, textarea { user-select: text; }
 .markdown kbd { font-family: var(--font-mono); font-size: var(--fs-xs); background: var(--bg-active); border: 1px solid var(--border-strong); border-bottom-width: 2px; padding: 1px 6px; border-radius: 5px; }
 .markdown .task-list-item { list-style: none; }
 
-.codeblock { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 10px 0; background: #161b22; }
+.codeblock { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 10px 0; background: #1a1a1a; }
 .codeblock-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid var(--border); }
 .codeblock-lang { font-size: var(--fs-2xs); color: var(--text-muted); font-family: var(--font-mono); text-transform: lowercase; }
 .codeblock-copy { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-muted); cursor: pointer; background: none; border: none; padding: 3px 8px; border-radius: 5px; transition: color 0.12s ease, background 0.12s ease; }

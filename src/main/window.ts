@@ -10,7 +10,7 @@ export function createMainWindow(): BrowserWindow {
     minHeight: 620,
     show: false,
     frame: false,
-    backgroundColor: '#0b0d12',
+    backgroundColor: '#0e0e0e',
     title: 'DeepDesk',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
