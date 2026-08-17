@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc-channels'
-import { chatCompletionWithTools } from '../shared/llm/toolcall'
+import { streamChatCompletionWithTools } from '../shared/llm/toolcall'
+import type { ToolCallItem } from '../shared/llm/toolcall'
 import { AGENT_TOOLS } from './agent-tools'
 import { executeTool, isDangerousCommand, isReadOnlyCommand, resolvePath, toolTargetPaths } from './tools'
 import type { AgentEvent, AgentRunRequest, AgentToolCall, AgentToolName, AgentToolResult } from '../shared/agent-types'
@@ -92,7 +93,10 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
     try {
       for (let turn = 0; turn < MAX_TURNS; turn++) {
         send({ runId: req.runId, type: 'thinking' })
-        const res = await chatCompletionWithTools({
+        let content = ''
+        let toolCalls: ToolCallItem[] = []
+        let usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined
+        for await (const chunk of streamChatCompletionWithTools({
           baseUrl: provider.baseUrl,
           apiKey: provider.apiKey,
           model: req.modelId,
@@ -100,14 +104,22 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
           tools: AGENT_TOOLS,
           temperature: req.temperature,
           signal: controller.signal
-        })
-        if (res.toolCalls.length > 0) {
+        })) {
+          if (chunk.type === 'content') {
+            content += chunk.text
+            send({ runId: req.runId, type: 'text', text: chunk.text })
+          } else {
+            toolCalls = chunk.toolCalls
+            usage = chunk.usage
+          }
+        }
+        if (toolCalls.length > 0) {
           messages.push({
             role: 'assistant',
-            content: res.content ?? null,
-            tool_calls: res.toolCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } }))
+            content: content || null,
+            tool_calls: toolCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } }))
           })
-          for (const rawCall of res.toolCalls) {
+          for (const rawCall of toolCalls) {
             const call: AgentToolCall = { id: rawCall.id, name: rawCall.name as AgentToolName, args: rawCall.args }
             send({ runId: req.runId, type: 'tool_call', call })
             const perm = evaluatePermission(call, req.workdir, mode)
@@ -137,10 +149,8 @@ export function startAgent(win: BrowserWindow, req: AgentRunRequest, provider: P
             messages.push({ role: 'tool', tool_call_id: call.id, content: result.content })
           }
         } else {
-          const content = res.content ?? ''
           messages.push({ role: 'assistant', content })
-          send({ runId: req.runId, type: 'text', text: content })
-          send({ runId: req.runId, type: 'done', usage: res.usage, history: messages })
+          send({ runId: req.runId, type: 'done', usage, history: messages })
           return
         }
       }

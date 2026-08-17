@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { streamOpenAICompatible } from '../src/shared/llm/openai'
+import { streamChatCompletionWithTools } from '../src/shared/llm/toolcall'
 
 let server: Server
 let base = ''
@@ -83,5 +84,65 @@ describe('streamOpenAICompatible', () => {
       slow.close()
     }
     expect(aborted).toBe(true)
+  })
+})
+
+describe('streamChatCompletionWithTools', () => {
+  let s2: Server
+  let base2 = ''
+
+  beforeAll(async () => {
+    const sse = (obj: unknown): string => 'data: ' + JSON.stringify(obj) + '\n\n'
+    s2 = createServer((req, res) => {
+      res.setHeader('Content-Type', 'text/event-stream')
+      if (req.url === '/tools/chat/completions') {
+        res.write(sse({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 'call_1', type: 'function', function: { name: 'write_file', arguments: '' } }] } }] }))
+        res.write(sse({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '{"path":"a.txt"' } }] } }] }))
+        res.write(sse({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: ',"content":"hi"}' } }] } }] }))
+        res.write(sse({ choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 5, completion_tokens: 12, total_tokens: 17 } }))
+        res.write('data: [DONE]\n\n')
+        res.end()
+        return
+      }
+      if (req.url === '/plain/chat/completions') {
+        res.write(sse({ choices: [{ index: 0, delta: { content: '流式' } }] }))
+        res.write(sse({ choices: [{ index: 0, delta: { content: '输出' } }] }))
+        res.write(sse({ choices: [{ index: 0, delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 } }))
+        res.write('data: [DONE]\n\n')
+        res.end()
+        return
+      }
+      res.statusCode = 404
+      res.end()
+    })
+    await new Promise<void>(r => s2.listen(0, '127.0.0.1', r))
+    base2 = 'http://127.0.0.1:' + (s2.address() as { port: number }).port
+  })
+
+  afterAll(() => { s2.close() })
+
+  it('按 index 累积 tool_calls 增量并解析参数', async () => {
+    let content = ''
+    let toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }> = []
+    let usage: { totalTokens?: number } | undefined
+    for await (const chunk of streamChatCompletionWithTools({ baseUrl: base2 + '/tools', apiKey: 'k', model: 'm', messages: [], tools: [] })) {
+      if (chunk.type === 'content') content += chunk.text
+      else { toolCalls = chunk.toolCalls; usage = chunk.usage }
+    }
+    expect(content).toBe('')
+    expect(toolCalls).toHaveLength(1)
+    expect(toolCalls[0]).toMatchObject({ id: 'call_1', name: 'write_file', args: { path: 'a.txt', content: 'hi' } })
+    expect(usage?.totalTokens).toBe(17)
+  })
+
+  it('纯文本流式增量并返回空工具调用', async () => {
+    let content = ''
+    let toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }> = []
+    for await (const chunk of streamChatCompletionWithTools({ baseUrl: base2 + '/plain', apiKey: 'k', model: 'm', messages: [], tools: [] })) {
+      if (chunk.type === 'content') content += chunk.text
+      else toolCalls = chunk.toolCalls
+    }
+    expect(content).toBe('流式输出')
+    expect(toolCalls).toHaveLength(0)
   })
 })
