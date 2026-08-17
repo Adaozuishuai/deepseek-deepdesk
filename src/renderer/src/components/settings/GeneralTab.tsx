@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useSettingsStore } from '../../stores/useSettingsStore'
+import type { AgentPermissionMode } from '@shared/types'
 import { Button, Select, Switch } from '../ui'
 import { useChatStore } from '../../stores/useChatStore'
 import clsx from 'clsx'
@@ -67,10 +68,18 @@ export default function GeneralTab() {
         </div>
         <div className='settings-row'>
           <div>
-            <div className='settings-row-label'>Agent 自动批准命令</div>
-            <div className='settings-row-desc'>开启后 Agent 执行命令不再逐条询问（危险命令仍会询问）</div>
+            <div className='settings-row-label'>Agent 权限模式</div>
+            <div className='settings-row-desc'>决定 Agent 执行命令、访问工作目录外文件时的批准策略</div>
           </div>
-          <Switch checked={settings.agentAutoApprove} onChange={v => void updateSettings({ agentAutoApprove: v })} />
+          <div className='tabs'>
+            {([
+              { key: 'ask', label: '每次询问' },
+              { key: 'auto', label: '替我审批' },
+              { key: 'full', label: '完全访问' }
+            ] as Array<{ key: AgentPermissionMode; label: string }>).map(o => (
+              <button key={o.key} className={clsx('tab', settings.agentPermissionMode === o.key && 'active')} onClick={() => void updateSettings({ agentPermissionMode: o.key })}>{o.label}</button>
+            ))}
+          </div>
         </div>
       </div>
 

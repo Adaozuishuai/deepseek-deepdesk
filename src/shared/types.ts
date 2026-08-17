@@ -1,5 +1,7 @@
 export type Theme = 'dark' | 'light' | 'system'
 
+export type AgentPermissionMode = 'ask' | 'auto' | 'full'
+
 export type ProviderType = 'openai'
 
 export interface ModelConfig {
@@ -50,7 +52,7 @@ export interface AppSettings {
   theme: Theme
   enterToSend: boolean
   agentWorkdir: string
-  agentAutoApprove: boolean
+  agentPermissionMode: AgentPermissionMode
 }
 
 export interface AppState {

@@ -35,6 +35,8 @@ export interface AgentEvent {
   ok?: boolean
   command?: string
   cwd?: string
+  target?: string
+  reason?: string
   usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }
 }
 

@@ -8,7 +8,7 @@ interface AgentState {
   running: boolean
   currentRunId: string | null
   steps: AgentStep[]
-  pendingApproval: { callId: string; command: string; cwd: string } | null
+  pendingApproval: { callId: string; command: string; cwd: string; target: string; reason: string } | null
   error: string | null
   init: () => void
   start: (task: string) => Promise<void>
@@ -40,7 +40,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       case 'thinking': append({ kind: 'thinking' }); break
       case 'text': append({ kind: 'text', text: ev.text ?? '' }); break
       case 'tool_call': append({ kind: 'tool', callId: ev.call?.id, name: ev.call?.name, args: JSON.stringify(ev.call?.args ?? {}, null, 2), status: 'running' }); break
-      case 'approval_request': set({ pendingApproval: { callId: ev.callId ?? '', command: ev.command ?? '', cwd: ev.cwd ?? '' } }); break
+      case 'approval_request': set({ pendingApproval: { callId: ev.callId ?? '', command: ev.command ?? '', cwd: ev.cwd ?? '', target: ev.target ?? '', reason: ev.reason ?? '' } }); break
       case 'tool_result': updateTool(ev.callId ?? '', { status: ev.ok ? 'ok' : 'error', summary: ev.summary ?? '', result: ev.output ?? '' }); break
       case 'done': set({ running: false, currentRunId: null, pendingApproval: null }); break
       case 'error': append({ kind: 'error', message: ev.message ?? '未知错误' }); set({ running: false, currentRunId: null, pendingApproval: null }); break

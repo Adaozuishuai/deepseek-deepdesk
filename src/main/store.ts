@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   enterToSend: true,
   agentWorkdir: '',
-  agentAutoApprove: false
+  agentPermissionMode: 'ask'
 }
 
 function cloneProviders(): ProviderConfig[] {
@@ -55,7 +55,11 @@ export class AppStore {
   }
 
   private migrate(parsed: Partial<AppState>): AppState {
-    const settings = { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) }
+    const raw = parsed.settings as (Partial<AppSettings> & { agentAutoApprove?: boolean }) | undefined
+    const settings: AppSettings = { ...DEFAULT_SETTINGS, ...(raw ?? {}) }
+    if (raw?.agentAutoApprove === true && settings.agentPermissionMode === 'ask') {
+      settings.agentPermissionMode = 'auto'
+    }
     const providers = Array.isArray(parsed.providers) ? parsed.providers : []
     const conversations = Array.isArray(parsed.conversations) ? parsed.conversations : []
     return { settings, providers, conversations }

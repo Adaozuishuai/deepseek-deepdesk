@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles } from 'lucide-react'
+import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
@@ -59,12 +59,21 @@ export default function AgentView() {
   const clear = useAgentStore(s => s.clear)
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
+  const updateSettings = useSettingsStore(s => s.updateSettings)
   const [text, setText] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const provider = providers.find(p => p.id === (settings?.defaultProviderId ?? 'deepseek'))
   const modelLabel = provider?.models.find(m => m.id === (settings?.defaultModelId ?? ''))?.name ?? settings?.defaultModelId ?? ''
+  const mode = settings?.agentPermissionMode ?? 'ask'
+  const modeLabel = mode === 'full' ? '完全访问' : mode === 'auto' ? '替我审批' : '每次询问'
+  const cycleMode = (): void => {
+    const order = ['ask', 'auto', 'full'] as const
+    const idx = order.indexOf(mode as 'ask' | 'auto' | 'full')
+    const next = order[(idx + 1) % order.length]
+    void updateSettings({ agentPermissionMode: next })
+  }
 
   useEffect(() => {
     const ta = taRef.current
@@ -92,9 +101,9 @@ export default function AgentView() {
     <div className='agent-view'>
       {pendingApproval && (
         <div className='agent-approval'>
-          <div className='agent-approval-title'>等待批准执行命令</div>
-          <pre className='agent-approval-cmd'>{pendingApproval.command}</pre>
-          <div className='agent-approval-cwd'>工作目录：{pendingApproval.cwd}</div>
+          <div className='agent-approval-title'>{pendingApproval.reason || '等待批准'}</div>
+          <pre className='agent-approval-cmd'>{pendingApproval.command || pendingApproval.target}</pre>
+          {pendingApproval.command && <div className='agent-approval-cwd'>工作目录：{pendingApproval.cwd}</div>}
           <div className='agent-approval-actions'>
             <button className='btn btn-primary btn-sm' onClick={() => approve(true)}><Check size={13} /> 批准</button>
             <button className='btn btn-danger btn-sm' onClick={() => approve(false)}><X size={13} /> 拒绝</button>
@@ -129,6 +138,10 @@ export default function AgentView() {
             rows={1}
           />
           <div className='composer-actions'>
+            <button className='model-pill' onClick={cycleMode} title={'权限模式：' + modeLabel + '（点击切换）'}>
+              {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
+              <span className='name'>{modeLabel}</span>
+            </button>
             <button className='model-pill' onClick={() => void pickDirectory()} title='选择工作目录'>
               <FolderOpen size={13} /><span className='name'>{workdir || '选择工作目录'}</span>
             </button>

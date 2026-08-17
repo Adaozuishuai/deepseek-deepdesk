@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -14,7 +14,7 @@ import type { AgentEvent } from '../src/shared/agent-types'
 import type { AppSettings, ProviderConfig } from '../src/shared/types'
 
 const provider: ProviderConfig = { id: 'deepseek', name: 'DeepSeek', type: 'openai', baseUrl: 'https://api.deepseek.com', apiKey: 'sk', models: [], createdAt: 0 }
-const baseSettings: AppSettings = { version: 1, defaultProviderId: 'deepseek', defaultModelId: 'deepseek-v4-pro', temperature: 1, theme: 'dark', enterToSend: true, agentWorkdir: '', agentAutoApprove: false }
+const baseSettings: AppSettings = { version: 1, defaultProviderId: 'deepseek', defaultModelId: 'deepseek-v4-pro', temperature: 1, theme: 'dark', enterToSend: true, agentWorkdir: '', agentPermissionMode: 'ask' }
 
 function makeWin() {
   const events: AgentEvent[] = []
@@ -27,6 +27,15 @@ async function runUntilDone(events: AgentEvent[]): Promise<void> {
     if (events.some(e => e.type === 'done' || e.type === 'error')) return
     await new Promise(r => setTimeout(r, 10))
   }
+}
+
+async function waitForApproval(events: AgentEvent[]): Promise<AgentEvent | undefined> {
+  for (let i = 0; i < 100; i++) {
+    const a = events.find(e => e.type === 'approval_request')
+    if (a) return a
+    await new Promise(r => setTimeout(r, 10))
+  }
+  return undefined
 }
 
 let dir: string
@@ -50,18 +59,13 @@ describe('startAgent', () => {
     expect(events.some(e => e.type === 'done')).toBe(true)
   })
 
-  it('run_command 默认需批准，拒绝后不执行', async () => {
+  it('ask 模式：run_command 默认需批准，拒绝后不执行', async () => {
     mocks.chatCompletionWithTools
       .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c2', name: 'run_command', args: { command: 'Write-Output should-not-run' } }] })
       .mockResolvedValueOnce({ content: '结束', toolCalls: [] })
     const { events, win } = makeWin()
     startAgent(win as never, { runId: 'r2', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '跑命令', temperature: 1 }, provider, baseSettings)
-    let approval: AgentEvent | undefined
-    for (let i = 0; i < 100; i++) {
-      approval = events.find(e => e.type === 'approval_request')
-      if (approval) break
-      await new Promise(r => setTimeout(r, 10))
-    }
+    const approval = await waitForApproval(events)
     expect(approval).toBeTruthy()
     approveCommand(approval!.callId!, false)
     await runUntilDone(events)
@@ -70,16 +74,79 @@ describe('startAgent', () => {
     expect(tr?.summary).toContain('拒绝')
   })
 
-  it('autoApprove 开启时命令直接执行', async () => {
+  it('full 模式：命令直接执行，无需批准', async () => {
     mocks.chatCompletionWithTools
       .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c3', name: 'run_command', args: { command: 'Write-Output auto-run-ok' } }] })
       .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
     const { events, win } = makeWin()
-    const autoSettings: AppSettings = { ...baseSettings, agentAutoApprove: true }
-    startAgent(win as never, { runId: 'r3', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '跑命令', temperature: 1 }, provider, autoSettings)
+    const fullSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'full' }
+    startAgent(win as never, { runId: 'r3', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '跑命令', temperature: 1 }, provider, fullSettings)
     await runUntilDone(events)
+    expect(events.some(e => e.type === 'approval_request')).toBe(false)
     const tr = events.find(e => e.type === 'tool_result')
     expect(tr?.ok).toBe(true)
     expect(tr?.output).toContain('auto-run-ok')
+  })
+
+  it('auto 模式：只读命令自动批准', async () => {
+    mocks.chatCompletionWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c6', name: 'run_command', args: { command: 'Write-Output readonly-ok' } }] })
+      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    const { events, win } = makeWin()
+    const autoSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'auto' }
+    startAgent(win as never, { runId: 'r6', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '只读命令', temperature: 1 }, provider, autoSettings)
+    await runUntilDone(events)
+    expect(events.some(e => e.type === 'approval_request')).toBe(false)
+    const tr = events.find(e => e.type === 'tool_result')
+    expect(tr?.ok).toBe(true)
+    expect(tr?.output).toContain('readonly-ok')
+  })
+
+  it('auto 模式：非只读命令仍需批准', async () => {
+    mocks.chatCompletionWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c7', name: 'run_command', args: { command: 'New-Item -ItemType File foo.txt' } }] })
+      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    const { events, win } = makeWin()
+    const autoSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'auto' }
+    startAgent(win as never, { runId: 'r7', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '写文件', temperature: 1 }, provider, autoSettings)
+    const approval = await waitForApproval(events)
+    expect(approval).toBeTruthy()
+    approveCommand(approval!.callId!, false)
+    await runUntilDone(events)
+  })
+
+  it('ask 模式：访问工作目录外文件需批准', async () => {
+    const outsideDir = mkdtempSync(join(tmpdir(), 'agent-outside-'))
+    const outsideFile = join(outsideDir, 'secret.txt')
+    writeFileSync(outsideFile, 'secret data')
+    mocks.chatCompletionWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c4', name: 'read_file', args: { path: outsideFile } }] })
+      .mockResolvedValueOnce({ content: '结束', toolCalls: [] })
+    const { events, win } = makeWin()
+    startAgent(win as never, { runId: 'r4', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '读外部文件', temperature: 1 }, provider, baseSettings)
+    const approval = await waitForApproval(events)
+    expect(approval).toBeTruthy()
+    expect(approval?.target).toBe(outsideFile)
+    approveCommand(approval!.callId!, true)
+    await runUntilDone(events)
+    const tr = events.find(e => e.type === 'tool_result')
+    expect(tr?.ok).toBe(true)
+    rmSync(outsideDir, { recursive: true, force: true })
+  })
+
+  it('full 模式：写工作目录外文件直接放行', async () => {
+    const outsideDir = mkdtempSync(join(tmpdir(), 'agent-outside-'))
+    const outsideFile = join(outsideDir, 'w.txt')
+    mocks.chatCompletionWithTools
+      .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c5', name: 'write_file', args: { path: outsideFile, content: 'hi' } }] })
+      .mockResolvedValueOnce({ content: '完成', toolCalls: [] })
+    const { events, win } = makeWin()
+    const fullSettings: AppSettings = { ...baseSettings, agentPermissionMode: 'full' }
+    startAgent(win as never, { runId: 'r5', providerId: 'deepseek', modelId: 'deepseek-v4-pro', workdir: dir, task: '写外部文件', temperature: 1 }, provider, fullSettings)
+    await runUntilDone(events)
+    expect(existsSync(outsideFile)).toBe(true)
+    expect(readFileSync(outsideFile, 'utf-8')).toBe('hi')
+    expect(events.some(e => e.type === 'approval_request')).toBe(false)
+    rmSync(outsideDir, { recursive: true, force: true })
   })
 })
