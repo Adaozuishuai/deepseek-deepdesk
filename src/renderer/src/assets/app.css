@@ -261,14 +261,14 @@ input, textarea { user-select: text; }
 .composer-wrap { position: relative; }
 .composer { display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
 .composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 4px 24px rgba(0, 0, 0, 0.25); }
-.composer-textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; overflow: hidden; color: var(--text); font-size: var(--fs-base); line-height: 1.6; padding: 12px 14px 4px; font-family: inherit; max-height: 220px; }
+.composer-textarea { width: 100%; background: transparent; border: none; outline: none; resize: none; overflow: hidden; color: var(--text); font-size: 16px; line-height: 24px; padding: 4px 16px 0; font-family: inherit; max-height: 220px; }
 .composer-textarea::placeholder { color: var(--text-muted); }
-.composer-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 6px 8px 8px 12px; }
+.composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 8px 8px; }
 .composer-hint { font-size: var(--fs-2xs); color: var(--text-muted); flex: 1; }
-.send-btn { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: none; cursor: pointer; transition: all 0.13s ease; }
+.send-btn { width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; border: none; cursor: pointer; transition: all 0.13s ease; }
 .send-btn:hover:not(:disabled) { background: #5a76ff; box-shadow: 0 2px 12px rgba(77, 107, 254, 0.5); transform: translateY(-1px); }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.stop-btn { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--bg-active); color: var(--text); border: 1px solid var(--border-strong); cursor: pointer; transition: background 0.13s ease; }
+.stop-btn { width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--bg-active); color: var(--text); border: 1px solid var(--border-strong); cursor: pointer; transition: background 0.13s ease; }
 .stop-btn:hover { background: var(--bg-hover); }
 .model-pill { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; font-size: var(--fs-xs); color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border); background: transparent; transition: all 0.12s ease; max-width: 220px; }
 .model-pill:hover { border-color: var(--accent); color: var(--text); }

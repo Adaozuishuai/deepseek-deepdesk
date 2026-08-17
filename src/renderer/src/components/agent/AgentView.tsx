@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Play, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { Bot, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, Sparkles, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
@@ -132,17 +132,6 @@ export default function AgentView() {
         </div>
       )}
       <div className='agent-footer'>
-        <div className='agent-toolbar'>
-          <button className='toolbar-item' onClick={cycleMode} title='权限模式（点击切换）'>
-            {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
-            <span>{modeLabel}</span>
-          </button>
-          <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
-            <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
-          </button>
-          <span className='toolbar-spacer' />
-          <span className='toolbar-model'>{modelLabel}</span>
-        </div>
         <div className='agent-composer'>
           <textarea
             ref={taRef}
@@ -154,14 +143,26 @@ export default function AgentView() {
             rows={1}
           />
           <div className='composer-actions'>
-            {steps.length > 0 && !running && (
-              <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>
-            )}
-            {running ? (
-              <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
-            ) : (
-              <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='发送'><Play size={15} /></button>
-            )}
+            <div className='composer-left'>
+              <button className='toolbar-item' onClick={cycleMode} title='权限模式（点击切换）'>
+                {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
+                <span>{modeLabel}</span>
+              </button>
+              <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
+                <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
+              </button>
+              {steps.length > 0 && !running && (
+                <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>
+              )}
+            </div>
+            <div className='composer-right'>
+              <span className='toolbar-model'>{modelLabel}</span>
+              {running ? (
+                <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
+              ) : (
+                <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='发送'><svg viewBox='0 0 16 16' width='16' height='16' aria-hidden><path d='M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z' fill='currentColor' /></svg></button>
+              )}
+            </div>
           </div>
         </div>
       </div>

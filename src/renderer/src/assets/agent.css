@@ -3,13 +3,12 @@
 .agent-inner { max-width: 820px; margin: 0 auto; padding: 20px 24px 12px; display: flex; flex-direction: column; gap: 12px; }
 .agent-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; gap: 6px; text-align: center; }
 .agent-footer { flex-shrink: 0; padding: 8px 0 16px; }
-.agent-toolbar { max-width: 820px; margin: 0 auto; padding: 0 24px 8px; display: flex; align-items: center; gap: 6px; }
-.toolbar-item { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 7px; font-size: var(--fs-xs); color: var(--text-muted); cursor: pointer; border: none; background: transparent; transition: color 0.12s ease, background 0.12s ease; max-width: 260px; }
+.composer-left, .composer-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.toolbar-item { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border); background: transparent; transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease; max-width: 260px; }
 .toolbar-item:hover { color: var(--text); background: var(--bg-hover); }
 .toolbar-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toolbar-spacer { flex: 1; }
 .toolbar-model { font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
-.agent-composer { max-width: 820px; margin: 0 auto; padding: 0 24px; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border-strong); border-radius: 14px; transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
+.agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 22px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
 .agent-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 .agent-task { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); border: 1px solid rgba(77, 107, 254, 0.25); font-size: var(--fs-base); line-height: 1.6; user-select: text; }
