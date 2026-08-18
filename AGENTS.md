@@ -20,12 +20,22 @@ src/
 tests/             # vitest 测试
 scripts/           # 图标生成等脚本
 docs/              # 架构说明
+.agents/           # 项目级 AI 协作资产（Skills / 规则沉淀）
+.github/           # CI / Release 工作流
 ```
+
+关键子目录均有局部 `AGENTS.md`，目录级索引见 `docs/folder-map.md`。
 
 ## 命令
 
 ```sh
 pnpm install      # 安装依赖（node >= 18.18，pnpm 10）
+pnpm flow -- help # 查看统一工程化命令入口
+pnpm doctor       # 环境与关键文件诊断
+pnpm ci           # CI 等价门禁：typecheck + lint + test + build
+pnpm quality      # typecheck + lint + test + build
+pnpm e2e          # E2E 隔离模式：每条用例独立启动客户端，CI 默认使用
+pnpm e2e:session  # E2E 会话模式：一个客户端窗口连续跑完整验收流
 pnpm dev          # 开发模式（热更新）
 pnpm start        # 运行已构建版本
 pnpm test         # vitest 单元测试
@@ -34,7 +44,10 @@ pnpm lint         # oxlint
 pnpm build        # electron-vite 构建
 pnpm smoke        # 构建 + Electron 冒烟测试
 pnpm package:win  # 打 Windows NSIS 安装包
+pnpm release:win  # 完整门禁 + Windows 打包
 ```
+
+优先使用统一入口：`pnpm flow -- <command> [options]`。详见 `docs/engineering.md`。
 
 ## 架构约定
 
@@ -62,3 +75,11 @@ pnpm package:win  # 打 Windows NSIS 安装包
 - 核心逻辑都有 vitest 测试；改行为必须同步改测试。
 - 测试用 mock（vi.mock / mock LLM / mock window.api），不联网、不真发飞书消息、不真执行危险命令。
 - `pnpm test` 全绿才能提交。
+- 提交前建议跑 `pnpm quality`；发版前跑 `pnpm release:win`。
+- PR / CI 规则见 `docs/ci.md`；E2E 模式见 `docs/e2e.md`；发布流程见 `docs/release.md`。
+
+## AI 协作沉淀
+
+- 项目工程化 Skill 位于 `.agents/skills/deepdesk-engineering/SKILL.md`。
+- 修改开发、测试、打包、发布流程时，同步更新 `docs/engineering.md`、`docs/testing.md` 和该 Skill。
+- 修改具体目录下文件时，先读取最近的局部 `AGENTS.md`；目录索引见 `docs/folder-map.md`。

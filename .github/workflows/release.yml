@@ -1,0 +1,72 @@
+name: Release Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Package target"
+        type: choice
+        required: true
+        default: win
+        options:
+          - win
+          - mac
+          - linux
+          - all
+
+jobs:
+  package:
+    name: Package ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win
+            os: windows-latest
+          - target: mac
+            os: macos-latest
+          - target: linux
+            os: ubuntu-latest
+    steps:
+      - name: Skip non-selected target
+        if: ${{ github.event.inputs.target != 'all' && github.event.inputs.target != matrix.target }}
+        run: echo "Skipping ${{ matrix.target }}"
+
+      - name: Checkout
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - name: Setup Node.js
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Run release gate and package
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        run: pnpm flow -- release --target ${{ matrix.target }}
+
+      - name: Upload artifacts
+        if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepdesk-${{ matrix.target }}-${{ github.sha }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.blockmap
+            release/latest*.yml
+          if-no-files-found: error
