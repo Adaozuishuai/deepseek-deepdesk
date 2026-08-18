@@ -1,0 +1,7 @@
+interface:
+  display_name: "DeepDesk Engineering"
+  short_description: "DeepDesk 开发测试发布工程化流程"
+  default_prompt: "Use $deepdesk-engineering to develop, test, package, or release DeepDesk with the repository engineering workflow."
+
+policy:
+  allow_implicit_invocation: true

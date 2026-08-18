@@ -5,6 +5,8 @@ import { registerIpc } from './ipc'
 import { cancelAllChats } from './llm'
 
 let mainWindow: BrowserWindow | null = null
+const userDataDir = process.env['DEEPDESK_USER_DATA_DIR']
+if (userDataDir) app.setPath('userData', userDataDir)
 const store = new AppStore()
 const gotLock = app.requestSingleInstanceLock()
 
