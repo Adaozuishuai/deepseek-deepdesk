@@ -1,7 +1,15 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import type { DeepDeskE2EApp } from './helpers'
-import { closeDeepDesk, expectAppShell, goBackToChat, launchDeepDesk, openSettings } from './helpers'
+import {
+  closeDeepDesk,
+  closeDeepDeskWithoutRemovingData,
+  expectAppShell,
+  expectComposerReady,
+  goBackToChat,
+  launchDeepDesk,
+  openSettings
+} from './helpers'
 
 let app: ElectronApplication
 let page: Page
@@ -20,6 +28,7 @@ test.afterEach(async () => {
 
 test('loads the app shell and opens settings', async () => {
   await expectAppShell(page)
+  await expectComposerReady(page)
 
   await openSettings(page)
 
@@ -56,6 +65,25 @@ test('supports sidebar collapse, expand, and new conversation action', async () 
 
   await expect(page.locator('.sidebar:not(.collapsed)')).toBeVisible()
   await expect(page.locator('.brand', { hasText: 'DeepDesk' })).toBeVisible()
+})
+
+test('supports global settings shortcuts and sidebar model entry', async () => {
+  await page.locator('.app-shell').click()
+  await page.keyboard.down('Control')
+  await page.keyboard.press(',')
+  await page.keyboard.up('Control')
+  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+
+  await page.locator('.model-chip').click()
+  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+
+  await page.keyboard.down('Control')
+  await page.keyboard.press(',')
+  await page.keyboard.up('Control')
+  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
 })
 
 test('cycles agent permission mode from the composer toolbar', async () => {
@@ -117,4 +145,83 @@ test('toggles maximize window control and emits UI state', async () => {
   await expect.poll(async () => app.evaluate(({ BrowserWindow }) => {
     return BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false
   })).toBe(false)
+})
+
+test('validates composer send button and missing api key error', async () => {
+  const textarea = page.getByPlaceholder('发消息，或让我帮你做点事…')
+  const sendButton = page.locator('.send-btn')
+
+  await expect(sendButton).toBeDisabled()
+
+  await textarea.fill('帮我介绍一下 DeepDesk')
+  await expect(sendButton).toBeEnabled()
+
+  await sendButton.click()
+
+  await expect(page.getByText('请先在「设置 → 模型服务」中配置 API Key')).toBeVisible()
+  await expect(textarea).toHaveValue('')
+})
+
+test('supports multiline composer input and context meter panel', async () => {
+  const textarea = page.getByPlaceholder('发消息，或让我帮你做点事…')
+
+  await textarea.fill('第一行')
+  await textarea.press('Shift+Enter')
+  await textarea.pressSequentially('第二行')
+
+  await expect(textarea).toHaveValue('第一行\n第二行')
+
+  await page.locator('.ctx-trigger').click()
+  await expect(page.locator('.ctx-panel')).toBeVisible()
+  await expect(page.locator('.ctx-panel', { hasText: '上下文已用' })).toBeVisible()
+})
+
+test('adds, edits, adds model, and deletes a custom provider without network calls', async () => {
+  await openSettings(page)
+  await page.getByRole('button', { name: '添加服务' }).click()
+
+  const modal = page.locator('.modal')
+  await modal.getByPlaceholder('例如：智谱 GLM / Kimi / 本地 Ollama').fill('Mock Local')
+  await modal.getByPlaceholder('https://api.deepseek.com').fill('http://127.0.0.1:11434/v1')
+  await modal.getByPlaceholder('sk-…').fill('sk-test-e2e')
+  await modal.getByRole('button', { name: '保存' }).click()
+
+  const card = page.locator('.provider-card').filter({ hasText: 'Mock Local' })
+  await expect(card).toBeVisible()
+  await expect(card.getByText('自定义')).toBeVisible()
+  await expect(card.getByText('已配置')).toBeVisible()
+
+  const apiKeyInput = card.getByPlaceholder('sk-…')
+  await expect(apiKeyInput).toHaveAttribute('type', 'password')
+  await card.locator('.input-wrap').locator('.icon-btn').click()
+  await expect(apiKeyInput).toHaveAttribute('type', 'text')
+
+  await card.locator('input').first().fill('Mock Local Updated')
+  await card.getByRole('button', { name: '保存' }).click()
+
+  const updatedCard = page.locator('.provider-card').filter({ hasText: 'Mock Local Updated' })
+  await expect(updatedCard).toBeVisible()
+
+  await updatedCard.getByPlaceholder('添加模型 ID，如 deepseek-v4-flash').fill('mock-chat')
+  await updatedCard.getByRole('button', { name: '添加' }).click()
+  await expect(updatedCard.locator('.model-chip-item', { hasText: 'mock-chat' })).toBeVisible()
+
+  await updatedCard.getByRole('button', { name: '删除' }).click()
+  await expect(page.locator('.provider-card').filter({ hasText: 'Mock Local Updated' })).toBeHidden()
+})
+
+test('persists general settings after app restart with the same user data directory', async () => {
+  await openSettings(page)
+  await page.getByRole('button', { name: '常规' }).click()
+  await page.getByRole('button', { name: '浅色' }).click()
+  await page.getByRole('button', { name: '完全访问' }).click()
+
+  const userDataDir = ctx!.userDataDir
+  await closeDeepDeskWithoutRemovingData(ctx)
+  ctx = await launchDeepDesk(userDataDir)
+  app = ctx.app
+  page = ctx.page
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(page.getByTitle('权限模式（点击切换）')).toContainText('完全访问')
 })

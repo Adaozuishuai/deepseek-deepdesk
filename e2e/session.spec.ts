@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { closeDeepDesk, expectAppShell, goBackToChat, launchDeepDesk, openSettings } from './helpers'
+import { closeDeepDesk, expectAppShell, expectComposerReady, goBackToChat, launchDeepDesk, openSettings } from './helpers'
 
 test('runs local acceptance flow in one Electron window', async () => {
   const ctx = await launchDeepDesk()
@@ -8,6 +8,7 @@ test('runs local acceptance flow in one Electron window', async () => {
   try {
     await test.step('load app shell', async () => {
       await expectAppShell(page)
+      await expectComposerReady(page)
     })
 
     await test.step('verify titlebar drag markers and settings navigation', async () => {
@@ -31,6 +32,25 @@ test('runs local acceptance flow in one Electron window', async () => {
       await expect(page.locator('.sidebar:not(.collapsed)')).toBeVisible()
     })
 
+    await test.step('verify shortcuts and sidebar model entry', async () => {
+      await page.locator('.app-shell').click()
+      await page.keyboard.down('Control')
+      await page.keyboard.press(',')
+      await page.keyboard.up('Control')
+      await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+
+      await page.locator('.model-chip').click()
+      await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+
+      await page.keyboard.down('Control')
+      await page.keyboard.press(',')
+      await page.keyboard.up('Control')
+      await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+    })
+
     await test.step('cycle composer permission mode', async () => {
       const permissionButton = page.getByTitle('权限模式（点击切换）')
       await expect(permissionButton).toContainText('每次询问')
@@ -43,6 +63,26 @@ test('runs local acceptance flow in one Electron window', async () => {
 
       await permissionButton.click()
       await expect(permissionButton).toContainText('每次询问')
+    })
+
+    await test.step('validate composer and context meter', async () => {
+      const textarea = page.getByPlaceholder('发消息，或让我帮你做点事…')
+      const sendButton = page.locator('.send-btn')
+
+      await expect(sendButton).toBeDisabled()
+      await textarea.fill('本地验收：检查未配置 key 的提示')
+      await expect(sendButton).toBeEnabled()
+      await sendButton.click()
+
+      await expect(page.getByText('请先在「设置 → 模型服务」中配置 API Key')).toBeVisible()
+
+      await textarea.fill('第一行')
+      await textarea.press('Shift+Enter')
+      await textarea.pressSequentially('第二行')
+      await expect(textarea).toHaveValue('第一行\n第二行')
+
+      await page.locator('.ctx-trigger').click()
+      await expect(page.locator('.ctx-panel')).toBeVisible()
     })
 
     await test.step('update general settings', async () => {
@@ -71,8 +111,24 @@ test('runs local acceptance flow in one Electron window', async () => {
       await modal.getByRole('button', { name: '保存' }).click()
       await expect(page.getByText('请填写服务名称')).toBeVisible()
 
-      await modal.getByRole('button', { name: '取消' }).click()
-      await expect(page.locator('.modal-title', { hasText: '添加模型服务' })).toBeHidden()
+      await modal.getByPlaceholder('例如：智谱 GLM / Kimi / 本地 Ollama').fill('Session Mock')
+      await modal.getByPlaceholder('https://api.deepseek.com').fill('http://127.0.0.1:11434/v1')
+      await modal.getByPlaceholder('sk-…').fill('sk-session')
+      await modal.getByRole('button', { name: '保存' }).click()
+
+      const card = page.locator('.provider-card').filter({ hasText: 'Session Mock' })
+      await expect(card).toBeVisible()
+      const apiKeyInput = card.getByPlaceholder('sk-…')
+      await expect(apiKeyInput).toHaveAttribute('type', 'password')
+      await card.locator('.input-wrap').locator('.icon-btn').click()
+      await expect(apiKeyInput).toHaveAttribute('type', 'text')
+
+      await card.getByPlaceholder('添加模型 ID，如 deepseek-v4-flash').fill('session-chat')
+      await card.getByRole('button', { name: '添加' }).click()
+      await expect(card.locator('.model-chip-item', { hasText: 'session-chat' })).toBeVisible()
+
+      await card.getByRole('button', { name: '删除' }).click()
+      await expect(page.locator('.provider-card').filter({ hasText: 'Session Mock' })).toBeHidden()
     })
 
     await test.step('toggle maximize window control', async () => {

@@ -1,6 +1,6 @@
 # DeepDesk 测试策略
 
-DeepDesk 当前具备基础质量门禁，但完整 UI 端到端测试仍需补齐。
+DeepDesk 当前具备基础质量门禁，并已接入真实 Electron UI 端到端测试。后续重点是补齐 mock LLM 聊天流、会话读回和 Agent 审批链路。
 
 ## 当前测试层级
 
@@ -30,7 +30,7 @@ pnpm flow -- check --include-build --include-smoke
 - Zustand store 行为
 - AppStore 持久化链路
 - Electron renderer 加载 smoke
-- Playwright Electron 覆盖启动、设置页、侧边栏、权限模式、Provider 弹窗、窗口最大化
+- Playwright Electron 覆盖启动、设置页、快捷键、侧边栏、模型入口、权限模式、输入框发送状态、多行输入、上下文面板、Provider 增删改、API Key 显隐、常规设置重启读回、窗口最大化
 - E2E 同时支持 CI 友好的 isolated 模式和人工观察友好的 session 模式
 
 ## 不应在测试中做的事
@@ -42,28 +42,39 @@ pnpm flow -- check --include-build --include-smoke
 
 ## 端到端测试建设路线
 
-第一阶段：最小 E2E（已接入）
+第一阶段：最小 E2E（已完成）
 
 - 引入 Playwright Electron。
 - 使用已接入的 `pnpm e2e` / `pnpm flow -- e2e` 入口。
 - 启动构建后的 Electron 应用。
 - 验证首页、设置页、侧边栏可见。
 
-第二阶段：核心业务 E2E
+第二阶段：核心 UI E2E（已完成基础覆盖）
+
+- 验证输入框发送按钮状态。
+- 验证多行输入。
+- 验证上下文面板。
+- 验证全局快捷键、侧边栏按钮和模型入口。
+- 验证模型服务新增、编辑、添加模型、删除。
+- 验证 API Key 显示/隐藏按钮。
+- 验证常规设置重启持久化。
+- 验证 isolated 和 session 两种运行模式。
+
+第三阶段：核心业务 E2E
 
 - 使用 mock LLM 服务。
 - 设置 Provider。
 - 发起一次聊天。
 - 验证流式内容渲染和会话保存。
 
-第三阶段：Agent E2E
+第四阶段：Agent E2E
 
 - 设置临时工作目录。
 - 发起安全的只读任务。
 - 验证工具审批弹窗。
 - 验证结果写入会话历史。
 
-第四阶段：安装包 smoke
+第五阶段：安装包 smoke
 
 - 打包后启动 unpacked 应用。
 - 可选：在 CI 虚拟机中安装 NSIS 包并启动应用。

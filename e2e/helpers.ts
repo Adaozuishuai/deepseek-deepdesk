@@ -10,8 +10,7 @@ export interface DeepDeskE2EApp {
   userDataDir: string
 }
 
-export async function launchDeepDesk(): Promise<DeepDeskE2EApp> {
-  const userDataDir = mkdtempSync(join(tmpdir(), 'deepdesk-e2e-'))
+export async function launchDeepDesk(userDataDir = mkdtempSync(join(tmpdir(), 'deepdesk-e2e-'))): Promise<DeepDeskE2EApp> {
   const app = await electron.launch({
     args: ['.'],
     env: {
@@ -26,7 +25,12 @@ export async function launchDeepDesk(): Promise<DeepDeskE2EApp> {
 export async function closeDeepDesk(ctx: DeepDeskE2EApp | null): Promise<void> {
   if (!ctx) return
   await ctx.app.close()
-  rmSync(ctx.userDataDir, { recursive: true, force: true })
+  rmSync(ctx.userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+}
+
+export async function closeDeepDeskWithoutRemovingData(ctx: DeepDeskE2EApp | null): Promise<void> {
+  if (!ctx) return
+  await ctx.app.close()
 }
 
 export async function expectAppShell(page: Page): Promise<void> {
@@ -43,4 +47,10 @@ export async function openSettings(page: Page): Promise<void> {
 export async function goBackToChat(page: Page): Promise<void> {
   await page.getByTitle('返回').click()
   await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+}
+
+export async function expectComposerReady(page: Page): Promise<void> {
+  await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
+  await expect(page.locator('.composer-select')).toBeVisible()
+  await expect(page.locator('.ctx-trigger')).toBeVisible()
 }
