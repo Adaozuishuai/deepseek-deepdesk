@@ -51,7 +51,7 @@ interface BadgeProps {
 }
 
 export function Badge({ tone, children }: BadgeProps) {
-  return <span className={clsx('badge', tone === 'builtin' && 'badge.builtin', tone === 'off' && 'badge.off', tone === 'ok' && 'badge.ok')}>{children}</span>
+  return <span className={clsx('badge', tone === 'builtin' && 'builtin', tone === 'off' && 'off', tone === 'ok' && 'ok')}>{children}</span>
 }
 
 interface ModalProps {

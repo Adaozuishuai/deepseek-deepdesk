@@ -4,33 +4,33 @@
 .agent-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; gap: 6px; text-align: center; }
 .agent-footer { flex-shrink: 0; padding: 8px 0 16px; }
 .composer-left, .composer-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.toolbar-item { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; font-size: var(--fs-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border); background: transparent; transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease; max-width: 260px; }
+.toolbar-item { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border-radius: var(--radius-sm); font-size: var(--fs-xs); font-weight: 500; color: var(--text-secondary); cursor: pointer; border: 1px solid transparent; background: transparent; transition: color 120ms ease, background 120ms ease; max-width: 260px; }
 .toolbar-item:hover { color: var(--text); background: var(--bg-hover); }
 .toolbar-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toolbar-model { font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; }
-.composer-select { max-width: 200px; height: 28px; padding: 0 22px 0 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; background-color: transparent; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%; background-size: 4px 4px; background-repeat: no-repeat; color: var(--text-secondary); font-size: var(--fs-sm); font-weight: 500; white-space: nowrap; cursor: pointer; appearance: none; }
+.composer-select { max-width: 200px; height: 28px; padding: 0 22px 0 9px; border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; background-color: transparent; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%; background-size: 4px 4px; background-repeat: no-repeat; color: var(--text-secondary); font-size: var(--fs-xs); font-weight: 500; white-space: nowrap; cursor: pointer; appearance: none; }
 .composer-select:hover { background-color: var(--bg-hover); color: var(--text); border-color: var(--border-strong); }
 .ctx-meter { position: relative; display: inline-flex; }
 .ctx-trigger { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border: none; border-radius: 999px; background: transparent; color: var(--text-secondary); cursor: pointer; }
 .ctx-trigger:hover { background: var(--bg-hover); }
 .ctx-track { fill: none; stroke: var(--border-strong); stroke-width: 2; }
 .ctx-fill { fill: none; stroke: var(--text-secondary); stroke-width: 2; stroke-linecap: round; }
-.ctx-panel { position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 100; box-sizing: border-box; width: 240px; padding: 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--bg-elevated); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); font-size: var(--fs-xs); line-height: 20px; color: var(--text-secondary); cursor: default; }
+.ctx-panel { position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 100; box-sizing: border-box; width: 240px; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--bg-elevated); box-shadow: var(--shadow-float); font-size: var(--fs-xs); line-height: 20px; color: var(--text-secondary); cursor: default; }
 .ctx-header { display: flex; align-items: center; gap: 6px; }
 .ctx-figures { margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text); }
 .ctx-percent { font-weight: 500; color: var(--text); }
 .ctx-bar { display: flex; margin: 10px 0 2px; height: 4px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
 .ctx-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
-.agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 22px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); transition: border-color 0.15s ease, box-shadow 0.15s ease; overflow: hidden; }
-.agent-composer:focus-within { border-color: var(--border-strong); }
+.agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: none; transition: border-color 150ms ease, box-shadow 150ms ease; overflow: hidden; }
+.agent-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
-.agent-task { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); border: 1px solid rgba(77, 107, 254, 0.25); font-size: var(--fs-base); line-height: 1.6; user-select: text; }
+.agent-task { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--accent-soft); border: 1px solid var(--accent-soft); font-size: var(--fs-base); line-height: 1.6; user-select: text; }
 .agent-task svg { margin-top: 2px; flex-shrink: 0; color: var(--accent-text); }
 .agent-thinking { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-muted); padding: 4px 2px; }
 .agent-text { font-size: var(--fs-base); line-height: 1.7; white-space: pre-wrap; word-break: break-word; user-select: text; }
 .agent-error { padding: 10px 14px; border-radius: 10px; background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.4); font-size: var(--fs-sm); }
 
-.agent-tool { border: 1px solid var(--border); border-radius: 10px; background: var(--bg-panel); overflow: hidden; }
+.agent-tool { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-panel); overflow: hidden; }
 .agent-tool.running { border-color: var(--accent); }
 .agent-tool.error { border-color: rgba(248, 113, 113, 0.5); }
 .agent-tool.denied { border-color: var(--danger); }
@@ -42,11 +42,11 @@
 .agent-tool.error .agent-tool-status { color: var(--danger); }
 .agent-tool.denied .agent-tool-status { color: var(--danger); }
 .agent-tool-chev { color: var(--text-muted); }
-.agent-tool-result { margin: 0; padding: 10px 12px; background: #0e0e0e; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.55; white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow-y: auto; color: #c9d1d9; user-select: text; }
+.agent-tool-result { margin: 0; padding: 10px 12px; background: var(--code-bg); border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.55; white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow-y: auto; color: var(--text-secondary); user-select: text; }
 
-.agent-approval { position: sticky; top: 0; z-index: 30; margin: 10px 24px; padding: 12px 14px; border-radius: 12px; background: var(--bg-elevated); border: 1px solid var(--warning); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4); }
+.agent-approval { position: sticky; top: 0; z-index: 30; margin: 10px 24px; padding: 12px 14px; border-radius: var(--radius-lg); background: var(--bg-elevated); border: 1px solid rgba(212, 175, 106, 0.5); box-shadow: none; }
 .agent-approval-title { font-size: var(--fs-sm); font-weight: 700; color: var(--warning); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.agent-approval-cmd { margin: 0 0 6px; padding: 8px 10px; background: #0e0e0e; border-radius: 8px; font-family: var(--font-mono); font-size: var(--fs-xs); color: #e7eaf2; white-space: pre-wrap; word-break: break-all; user-select: text; }
+.agent-approval-cmd { margin: 0 0 6px; padding: 8px 10px; background: var(--code-bg); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text); white-space: pre-wrap; word-break: break-all; user-select: text; }
 .agent-approval-cwd { font-size: var(--fs-2xs); color: var(--text-muted); margin-bottom: 10px; }
 .agent-approval-actions { display: flex; gap: 8px; }
 

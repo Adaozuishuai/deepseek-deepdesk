@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { closeDeepDesk, expectAppShell, expectComposerReady, goBackToChat, launchDeepDesk, openSettings } from './helpers'
+import { closeDeepDesk, expectAppShell, expectComposerReady, goBackToChat, isMainWindowMaximized, launchDeepDesk, openSettings } from './helpers'
 
 test('runs local acceptance flow in one Electron window', async () => {
   const ctx = await launchDeepDesk()
@@ -63,6 +63,13 @@ test('runs local acceptance flow in one Electron window', async () => {
 
       await permissionButton.click()
       await expect(permissionButton).toContainText('每次询问')
+    })
+
+    await test.step('select a mock agent work directory without a native dialog', async () => {
+      const directoryPicker = page.getByTitle('选择工作目录')
+
+      await directoryPicker.click()
+      await expect(directoryPicker).toContainText(ctx.userDataDir)
     })
 
     await test.step('validate composer and context meter', async () => {
@@ -132,15 +139,16 @@ test('runs local acceptance flow in one Electron window', async () => {
     })
 
     await test.step('toggle maximize window control', async () => {
-      await page.getByTitle('最大化').click()
-      await expect.poll(async () => app.evaluate(({ BrowserWindow }) => {
-        return BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false
-      })).toBe(true)
+      const maximize = page.getByRole('button', { name: '最大化' })
+      const initiallyMaximized = await isMainWindowMaximized(app)
 
-      await page.getByTitle('最大化').click()
-      await expect.poll(async () => app.evaluate(({ BrowserWindow }) => {
-        return BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false
-      })).toBe(false)
+      await maximize.click()
+      await expect.poll(() => isMainWindowMaximized(app)).not.toBe(initiallyMaximized)
+      await expect(maximize).toHaveAttribute('aria-pressed', String(!initiallyMaximized))
+
+      await maximize.click()
+      await expect.poll(() => isMainWindowMaximized(app)).toBe(initiallyMaximized)
+      await expect(maximize).toHaveAttribute('aria-pressed', String(initiallyMaximized))
     })
   } finally {
     await closeDeepDesk(ctx)

@@ -107,6 +107,9 @@ export function registerIpc(store: AppStore, getWindow: () => BrowserWindow | nu
   })
 
   ipcMain.handle(IPC.AgentPickDirectory, async (event) => {
+    const e2eDirectory = process.env['DEEPDESK_E2E_PICK_DIRECTORY']
+    if (e2eDirectory) return e2eDirectory
+
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return null
     const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] })

@@ -3,9 +3,10 @@ import TitleBar from './components/titlebar/TitleBar'
 import Sidebar from './components/sidebar/Sidebar'
 import AgentView from './components/agent/AgentView'
 import SettingsView from './components/settings/SettingsView'
+import DeepSeekLogo from './components/DeepSeekLogo'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useAgentStore } from './stores/useAgentStore'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 type View = 'chat' | 'settings'
 
@@ -56,7 +57,7 @@ export default function App() {
     return (
       <div className='splash'>
         <div className='splash-logo'>
-          <div className='brand-logo'><Sparkles size={15} /></div>
+          <div className='brand-logo'><DeepSeekLogo width={18} height={18} /></div>
           DeepDesk
         </div>
         <Loader2 className='spin' size={18} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Bot, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { ArrowDown, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
@@ -91,7 +91,7 @@ function ToolCard({ step }: { step: AgentStep }) {
 
 function StepItem({ step }: { step: AgentStep }) {
   switch (step.kind) {
-    case 'task': return <div className='agent-task'><Bot size={14} /><span>{step.text}</span></div>
+    case 'task': return <div className='agent-task'><span>{step.text}</span></div>
     case 'thinking': return <div className='agent-thinking'><span className='thinking-icon' />思考中…</div>
     case 'text': return <Markdown text={step.text ?? ''} />
     case 'tool': return <ToolCard step={step} />
@@ -116,6 +116,7 @@ export default function AgentView() {
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
   const [text, setText] = useState('')
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
@@ -139,8 +140,31 @@ export default function AgentView() {
 
   useEffect(() => {
     const el = scrollRef.current
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'auto' })
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'auto' })
+      setShowScrollToBottom(false)
+    }
   }, [steps, pendingApproval])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const updateScrollToBottom = (): void => {
+      setShowScrollToBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 96)
+    }
+
+    updateScrollToBottom()
+    el.addEventListener('scroll', updateScrollToBottom)
+    return () => el.removeEventListener('scroll', updateScrollToBottom)
+  }, [steps.length])
+
+  const scrollToBottom = (): void => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    setShowScrollToBottom(false)
+  }
 
   const submit = async (): Promise<void> => {
     if (!text.trim() || running) return
@@ -182,6 +206,11 @@ export default function AgentView() {
         </div>
       )}
       <div className='agent-footer'>
+        {showScrollToBottom && (
+          <button type='button' className='scroll-to-bottom' title='回到底部' aria-label='回到底部' onClick={scrollToBottom}>
+            <ArrowDown size={17} />
+          </button>
+        )}
         <div className='agent-composer'>
           <textarea
             ref={taRef}

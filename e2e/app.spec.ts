@@ -4,9 +4,11 @@ import type { DeepDeskE2EApp } from './helpers'
 import {
   closeDeepDesk,
   closeDeepDeskWithoutRemovingData,
+  createLongAgentSessionUserData,
   expectAppShell,
   expectComposerReady,
   goBackToChat,
+  isMainWindowMaximized,
   launchDeepDesk,
   openSettings
 } from './helpers'
@@ -101,6 +103,14 @@ test('cycles agent permission mode from the composer toolbar', async () => {
   await expect(permissionButton).toContainText('每次询问')
 })
 
+test('selects a mock agent work directory without opening a native dialog', async () => {
+  const directoryPicker = page.getByTitle('选择工作目录')
+
+  await directoryPicker.click()
+
+  await expect(directoryPicker).toContainText(ctx!.userDataDir)
+})
+
 test('updates general settings without calling external services', async () => {
   await page.getByTitle('设置 (Ctrl+,)').click()
   await page.getByRole('button', { name: '常规' }).click()
@@ -132,19 +142,18 @@ test('opens provider modal, validates required fields, and closes it', async () 
 })
 
 test('toggles maximize window control and emits UI state', async () => {
-  const maximize = page.getByTitle('最大化')
+  const maximize = page.getByRole('button', { name: '最大化' })
+  const initiallyMaximized = await isMainWindowMaximized(app)
 
   await maximize.click()
-  await expect.poll(async () => app.evaluate(({ BrowserWindow }) => {
-    return BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false
-  })).toBe(true)
+  await expect.poll(() => isMainWindowMaximized(app)).not.toBe(initiallyMaximized)
+  await expect(maximize).toHaveAttribute('aria-pressed', String(!initiallyMaximized))
 
-  await expect(page.getByTitle('最大化')).toBeVisible()
+  await expect(maximize).toBeVisible()
 
   await maximize.click()
-  await expect.poll(async () => app.evaluate(({ BrowserWindow }) => {
-    return BrowserWindow.getAllWindows()[0]?.isMaximized() ?? false
-  })).toBe(false)
+  await expect.poll(() => isMainWindowMaximized(app)).toBe(initiallyMaximized)
+  await expect(maximize).toHaveAttribute('aria-pressed', String(initiallyMaximized))
 })
 
 test('validates composer send button and missing api key error', async () => {
@@ -224,4 +233,32 @@ test('persists general settings after app restart with the same user data direct
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await expect(page.getByTitle('权限模式（点击切换）')).toContainText('完全访问')
+})
+
+test('places the scroll-to-bottom control above the composer in a long agent session', async () => {
+  await closeDeepDesk(ctx)
+  ctx = await launchDeepDesk(createLongAgentSessionUserData())
+  app = ctx.app
+  page = ctx.page
+
+  const session = page.locator('.conv-item', { hasText: '长对话视觉回归' })
+  await session.click()
+
+  const scroll = page.locator('.agent-scroll')
+  await expect(scroll).toBeVisible()
+  await scroll.evaluate(element => {
+    element.scrollTop = 0
+    element.dispatchEvent(new Event('scroll'))
+  })
+
+  const scrollButton = page.getByTitle('回到底部')
+  await expect(scrollButton).toBeVisible()
+
+  const [buttonBox, composerBox] = await Promise.all([scrollButton.boundingBox(), page.locator('.agent-composer').boundingBox()])
+  expect(buttonBox).not.toBeNull()
+  expect(composerBox).not.toBeNull()
+  expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(composerBox!.y - 8)
+
+  await scrollButton.click()
+  await expect.poll(async () => scroll.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThanOrEqual(2)
 })
