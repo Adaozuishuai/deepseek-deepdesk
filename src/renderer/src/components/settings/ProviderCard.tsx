@@ -6,13 +6,6 @@ import { Badge, Button, Input, Spinner } from '../ui'
 import { normalizeBaseUrl } from '../../lib/utils'
 import clsx from 'clsx'
 
-const GRADIENTS = [
-  'linear-gradient(135deg, #4d6bfe, #7c3aed)',
-  'linear-gradient(135deg, #0ea5e9, #6366f1)',
-  'linear-gradient(135deg, #f59e0b, #ef4444)',
-  'linear-gradient(135deg, #10b981, #0ea5e9)'
-]
-
 export default function ProviderCard({ provider }: { provider: ProviderConfig }) {
   const saveProvider = useSettingsStore(s => s.saveProvider)
   const removeProvider = useSettingsStore(s => s.removeProvider)
@@ -23,8 +16,6 @@ export default function ProviderCard({ provider }: { provider: ProviderConfig })
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [newModelId, setNewModelId] = useState('')
   const dirty = JSON.stringify(draft) !== JSON.stringify(provider)
-
-  const gradient = GRADIENTS[provider.id.length % GRADIENTS.length]
 
   const save = async (): Promise<void> => {
     const clean = { ...draft, baseUrl: normalizeBaseUrl(draft.baseUrl) }
@@ -60,7 +51,7 @@ export default function ProviderCard({ provider }: { provider: ProviderConfig })
   return (
     <div className='provider-card'>
       <div className='provider-head'>
-        <div className='provider-icon' style={{ background: gradient }}><Server size={16} /></div>
+        <div className='provider-icon'><Server size={16} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className='provider-name'>{draft.name}</span>

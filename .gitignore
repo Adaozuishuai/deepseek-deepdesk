@@ -6,3 +6,8 @@ release
 .DS_Store
 *.tsbuildinfo
 probe.txt
+
+# Playwright 本地测试产物（失败排查与 CI 工件使用，不纳入版本控制）
+test-results/
+playwright-report/
+blob-report/

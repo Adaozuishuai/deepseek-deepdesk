@@ -1,6 +1,14 @@
-import { BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { IPC } from '../shared/ipc-channels'
+
+function getDevelopmentWindowIcon(): string | undefined {
+  if (app.isPackaged) return undefined
+
+  const iconPath = path.join(app.getAppPath(), 'build', 'icon.png')
+  return existsSync(iconPath) ? iconPath : undefined
+}
 
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -12,6 +20,7 @@ export function createMainWindow(): BrowserWindow {
     frame: false,
     backgroundColor: '#0e0e0e',
     title: 'DeepDesk',
+    icon: getDevelopmentWindowIcon(),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
