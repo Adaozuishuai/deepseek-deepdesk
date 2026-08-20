@@ -53,6 +53,48 @@ test('marks titlebar drag regions and supports settings back button', async () =
   await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
 })
 
+test('integrates the titlebar and sidebar into one application shell', async () => {
+  await expect(page.locator('.app-main')).toBeVisible()
+
+  const layout = await page.evaluate(() => {
+    const titlebar = document.querySelector('.titlebar')
+    const sidebar = document.querySelector('.sidebar')
+    const main = document.querySelector('.app-main')
+    if (!titlebar || !sidebar || !main) return null
+    return {
+      titlebarBorder: getComputedStyle(titlebar).borderBottomWidth,
+      titlebarHeight: getComputedStyle(titlebar).height,
+      sidebarBorder: getComputedStyle(sidebar).borderRightWidth,
+      sidebarWidth: getComputedStyle(sidebar).width,
+      mainRadius: getComputedStyle(main).borderTopLeftRadius
+    }
+  })
+
+  expect(layout).toEqual({ titlebarBorder: '0px', titlebarHeight: '34px', sidebarBorder: '0px', sidebarWidth: '220px', mainRadius: '14px' })
+})
+
+test('centers the empty conversation composer with the welcome content', async () => {
+  const composer = page.locator('.agent-empty .agent-composer')
+  await expect(composer).toBeVisible()
+  await expect(page.locator('.agent-footer')).toBeHidden()
+
+  const layout = await page.evaluate(() => {
+    const main = document.querySelector('.app-main')
+    const input = document.querySelector('.agent-empty .agent-composer')
+    if (!main || !input) return null
+    const mainBox = main.getBoundingClientRect()
+    const inputBox = input.getBoundingClientRect()
+    return {
+      composerTopRatio: (inputBox.top - mainBox.top) / mainBox.height,
+      composerBottomRatio: (inputBox.bottom - mainBox.top) / mainBox.height
+    }
+  })
+
+  expect(layout).not.toBeNull()
+  expect(layout!.composerTopRatio).toBeGreaterThan(0.35)
+  expect(layout!.composerBottomRatio).toBeLessThan(0.82)
+})
+
 test('supports sidebar collapse, expand, and new conversation action', async () => {
   await expect(page.locator('.sidebar')).toBeVisible()
 
@@ -109,14 +151,23 @@ test('selects agent permission mode from the gray composer menu', async () => {
   await expect(permissionButton).toContainText('每次询问')
 })
 
-test('selects a model from the custom gray composer menu', async () => {
+test('selects a model from the polished composer model picker', async () => {
   const modelButton = page.getByTitle('选择模型')
+
+  await expect(modelButton).toContainText('Auto')
 
   await modelButton.click()
   const menu = page.getByRole('menu', { name: '选择模型' })
   await expect(menu).toBeVisible()
+  await expect(menu.getByRole('switch', { name: 'Max 模式' })).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: 'Auto' })).toHaveAttribute('aria-checked', 'true')
+
   await menu.getByRole('menuitemradio', { name: 'DeepSeek V4 Pro（深度思考）' }).click()
   await expect(modelButton).toContainText('DeepSeek V4 Pro（深度思考）')
+
+  await modelButton.click()
+  await page.getByRole('menuitem', { name: '配置自定义模型' }).click()
+  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
 })
 
 test('selects a mock agent work directory without opening a native dialog', async () => {

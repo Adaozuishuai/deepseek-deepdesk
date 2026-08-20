@@ -36,6 +36,7 @@ pnpm ci           # CI 等价门禁：typecheck + lint + test + build
 pnpm quality      # typecheck + lint + test + build
 pnpm e2e          # E2E 隔离模式：每条用例独立启动客户端，CI 默认使用
 pnpm e2e:session  # E2E 会话模式：一个客户端窗口连续跑完整验收流
+pnpm flow -- seed-ui-session # 写入本地 UI 检查 mock 会话（UI会话）
 pnpm dev          # 开发模式（热更新）
 pnpm start        # 运行已构建版本
 pnpm test         # vitest 单元测试

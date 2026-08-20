@@ -34,6 +34,7 @@ Common commands:
 - E2E session entrypoint: `pnpm flow -- e2e --mode session`
 - Unit/integration tests: `pnpm flow -- test --kind unit`
 - Electron smoke: `pnpm flow -- test --kind smoke`
+- Seed UI review mock session: `pnpm flow -- seed-ui-session`
 - Windows package: `pnpm flow -- package --target win`
 - Release candidate: `pnpm flow -- release --target win`
 

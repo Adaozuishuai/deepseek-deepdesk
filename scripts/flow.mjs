@@ -22,6 +22,8 @@ Commands:
   e2e [--mode isolated|session|all]
                                  Run E2E tests. isolated is CI-friendly; session keeps one window open
   test [--kind unit|smoke|all]   Run tests. "unit"=vitest, "smoke"=Electron smoke, "all"=both
+  seed-ui-session [--user-data-dir <dir>]
+                                 Seed a persisted UI review mock session named UI会话
   build                          Run production build
   package --target win|mac|linux|all
                                  Build platform package with electron-builder
@@ -36,6 +38,7 @@ Examples:
   pnpm flow -- ci --include-build
   pnpm flow -- e2e
   pnpm flow -- e2e --mode session
+  pnpm flow -- seed-ui-session
   pnpm flow -- test --kind smoke
   pnpm flow -- package --target win
   pnpm flow -- release --target win
@@ -148,6 +151,13 @@ function testSteps(kind) {
   throw new Error(`Invalid --kind: ${kind}`)
 }
 
+function seedUiSessionSteps(flags) {
+  const args = ['scripts/seed-ui-session.mjs']
+  const userDataDir = flag(flags, 'user-data-dir', '')
+  if (userDataDir) args.push('--user-data-dir', String(userDataDir))
+  return [{ name: 'seed-ui-session', command: node, args }]
+}
+
 function e2eArgs(mode) {
   if (mode === 'isolated') return ['exec', 'playwright', 'test', 'e2e/app.spec.ts']
   if (mode === 'session') return ['exec', 'playwright', 'test', 'e2e/session.spec.ts']
@@ -220,6 +230,7 @@ async function main() {
     if (command === 'check') return runSteps(checkSteps(flags), Boolean(flag(flags, 'continue-on-error')))
     if (command === 'e2e') return e2e(flags)
     if (command === 'test') return runSteps(testSteps(String(flag(flags, 'kind', 'unit'))))
+    if (command === 'seed-ui-session') return runSteps(seedUiSessionSteps(flags))
     if (command === 'build') return runSteps([{ name: 'build', command: pnpm, args: ['build'] }])
     if (command === 'package') return runSteps(packageSteps(String(flag(flags, 'target', 'win'))))
     if (command === 'release') {
