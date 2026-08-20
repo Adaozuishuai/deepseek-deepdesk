@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { makeTitle, normalizeBaseUrl, uid } from '../src/renderer/src/lib/utils'
 import { formatTokens } from '../src/renderer/src/lib/format'
+import { APP_VERSION } from '../src/shared/app-meta'
+import packageJson from '../package.json'
 
 describe('makeTitle', () => {
   it('取首行', () => {
@@ -33,5 +35,11 @@ describe('formatTokens', () => {
     expect(formatTokens(500)).toBe('500')
     expect(formatTokens(1500)).toBe('1.5K')
     expect(formatTokens(undefined)).toBe('')
+  })
+})
+
+describe('APP_VERSION', () => {
+  it('与 package.json 版本保持一致', () => {
+    expect(APP_VERSION).toBe(packageJson.version)
   })
 })

@@ -10,6 +10,7 @@ interface AgentState {
   currentTask: string
   currentModelId: string
   currentSessionId: string
+  draftTask: string
   steps: AgentStep[]
   history: Array<Record<string, unknown>>
   sessions: AgentSession[]
@@ -27,6 +28,7 @@ interface AgentState {
   updateStep: (index: number, patch: Partial<AgentStep>) => void
   setStepFeedback: (index: number, feedback: 'positive' | 'negative') => void
   regenerateFrom: (index: number) => Promise<void>
+  setDraftTask: (task: string) => void
   clear: () => void
 }
 
@@ -115,6 +117,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     currentTask: '',
     currentModelId: '',
     currentSessionId: '',
+    draftTask: '',
     steps: [],
     history: [],
     sessions: [],
@@ -207,6 +210,9 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       if (!task) return
       set({ steps: steps.slice(0, taskIndex), history: [] })
       await get().start(task)
+    },
+    setDraftTask: (task) => {
+      set({ draftTask: task })
     },
     clear: () => {
       if (get().running) get().stop()

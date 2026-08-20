@@ -3,12 +3,13 @@ import TitleBar from './components/titlebar/TitleBar'
 import Sidebar from './components/sidebar/Sidebar'
 import AgentView from './components/agent/AgentView'
 import SettingsView from './components/settings/SettingsView'
+import FeatureHub from './components/hub/FeatureHub'
 import DeepSeekLogo from './components/DeepSeekLogo'
 import { useSettingsStore } from './stores/useSettingsStore'
 import { useAgentStore } from './stores/useAgentStore'
 import { Loader2 } from 'lucide-react'
 
-type View = 'chat' | 'settings'
+type View = 'chat' | 'settings' | 'connectors' | 'skills' | 'more'
 type SettingsTab = 'general' | 'providers'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
       if (mod && e.key === 'n') {
         e.preventDefault()
         useAgentStore.getState().clear()
+        setView('chat')
       } else if (mod && e.key === ',') {
         e.preventDefault()
         setView(v => {
@@ -76,13 +78,33 @@ export default function App() {
     setView('settings')
   }
 
+  const openChat = (): void => {
+    setView('chat')
+  }
+
+  const newTask = (): void => {
+    useAgentStore.getState().clear()
+    setView('chat')
+  }
+
   return (
     <div className='app-shell'>
       <TitleBar view={view} />
       <div className='app-body'>
-        {view === 'chat' && <Sidebar view={view} onOpenSettings={openSettings} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(c => !c)} />}
+        {view !== 'settings' && (
+          <Sidebar
+            view={view}
+            onNavigate={setView}
+            onNewTask={newTask}
+            onOpenSettings={openSettings}
+            collapsed={collapsed}
+            onToggleCollapsed={() => setCollapsed(c => !c)}
+          />
+        )}
         <main className={view === 'settings' ? 'app-main settings-main' : 'app-main'}>
-          {view === 'chat' ? <AgentView onOpenSettings={() => openSettings('providers')} /> : <SettingsView onBack={() => setView('chat')} tab={settingsTab} onTabChange={setSettingsTab} />}
+          {view === 'chat' && <AgentView onOpenSettings={() => openSettings('providers')} />}
+          {view === 'settings' && <SettingsView onBack={() => setView('chat')} tab={settingsTab} onTabChange={setSettingsTab} />}
+          {(view === 'connectors' || view === 'skills' || view === 'more') && <FeatureHub view={view} onNavigate={setView} onOpenChat={openChat} onOpenSettings={openSettings} />}
         </main>
       </div>
     </div>

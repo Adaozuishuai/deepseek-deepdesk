@@ -50,7 +50,7 @@ export default function GeneralTab() {
         <div className='settings-row'>
           <div>
             <div className='settings-row-label'>默认模型服务</div>
-            <div className='settings-row-desc'>新对话默认使用的服务，可在输入框随时切换</div>
+            <div className='settings-row-desc'>新任务默认使用的服务，可在输入框随时切换</div>
           </div>
           <Select value={settings.defaultProviderId} onChange={e => void updateSettings({ defaultProviderId: e.target.value })} style={{ width: 220 }}>
             {providers.map(p => <option key={p.id} value={p.id}>{p.name}{p.apiKey ? '' : '（未配置）'}</option>)}
@@ -91,8 +91,8 @@ export default function GeneralTab() {
       <div className='settings-card danger-zone'>
         <div className='settings-row'>
           <div>
-            <div className='settings-row-label'>对话记录</div>
-            <div className='settings-row-desc'>当前共 {conversations.length} 条对话，全部存储在本地</div>
+            <div className='settings-row-label'>任务记录</div>
+            <div className='settings-row-desc'>当前共 {conversations.length} 条记录，全部存储在本地</div>
           </div>
           <Button variant='danger' size='sm' onClick={() => { conversations.forEach(c => void deleteConversation(c.id)) }}>清空全部</Button>
         </div>

@@ -1,29 +1,38 @@
-import { useMemo, useState } from 'react'
-import { Plus, Settings, Search, Trash2, Pencil, PanelLeftClose, PanelLeftOpen, UserRound } from 'lucide-react'
+import { useState } from 'react'
+import { Blocks, ChevronDown, MoreHorizontal, Plus, Settings, Trash2, Pencil, PanelLeftClose, PanelLeftOpen, UserRound, PlugZap } from 'lucide-react'
 import DeepSeekLogo from '../DeepSeekLogo'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { formatTime } from '../../lib/format'
+import { APP_VERSION } from '@shared/app-meta'
 import clsx from 'clsx'
 
+type AppView = 'chat' | 'settings' | 'connectors' | 'skills' | 'more'
 type SettingsTab = 'general' | 'providers'
 
-export default function Sidebar({ view, onOpenSettings, collapsed, onToggleCollapsed }: { view: string; onOpenSettings: (tab?: SettingsTab) => void; collapsed: boolean; onToggleCollapsed: () => void }) {
+export default function Sidebar({
+  view,
+  onNavigate,
+  onNewTask,
+  onOpenSettings,
+  collapsed,
+  onToggleCollapsed
+}: {
+  view: AppView
+  onNavigate: (view: AppView) => void
+  onNewTask: () => void
+  onOpenSettings: (tab?: SettingsTab) => void
+  collapsed: boolean
+  onToggleCollapsed: () => void
+}) {
   const sessions = useAgentStore(s => s.sessions)
   const activeSessionId = useAgentStore(s => s.activeSessionId)
   const loadSession = useAgentStore(s => s.loadSession)
   const deleteSession = useAgentStore(s => s.deleteSession)
-  const clear = useAgentStore(s => s.clear)
   const renameSession = useAgentStore(s => s.renameSession)
-  const [query, setQuery] = useState('')
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameText, setRenameText] = useState('')
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return sessions
-    return sessions.filter(s => s.task.toLowerCase().includes(q))
-  }, [sessions, query])
+  const [tasksOpen, setTasksOpen] = useState(true)
 
   const commitRename = (id: string): void => {
     const t = renameText.trim()
@@ -31,12 +40,20 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
     setRenamingId(null)
   }
 
+  const openSession = (id: string): void => {
+    loadSession(id)
+    onNavigate('chat')
+  }
+
   return (
     <aside className={clsx('sidebar', collapsed && 'collapsed')}>
       {collapsed ? (
         <div className='sidebar-rail'>
           <button className='icon-btn' onClick={onToggleCollapsed} title='展开侧边栏'><PanelLeftOpen size={16} /></button>
-          <button className='icon-btn' onClick={() => clear()} title='新对话'><Plus size={16} /></button>
+          <button className='icon-btn' onClick={onNewTask} title='新建任务'><Plus size={16} /></button>
+          <button className='icon-btn' onClick={() => onNavigate('connectors')} title='连接器'><PlugZap size={15} /></button>
+          <button className='icon-btn' onClick={() => onNavigate('skills')} title='技能广场'><Blocks size={15} /></button>
+          <button className='icon-btn' onClick={() => onNavigate('more')} title='更多'><MoreHorizontal size={16} /></button>
           <button className='icon-btn' onClick={() => onOpenSettings('general')} title='设置'><Settings size={15} /></button>
         </div>
       ) : (
@@ -44,45 +61,54 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
           <div className='sidebar-header'>
             <div className='brand'>
               <div className='brand-logo'><DeepSeekLogo width={22} height={22} /></div>
-              DeepDesk
+              <span className='brand-copy'>
+                <span className='brand-name'>DeepDesk</span>
+                <span className='brand-version'>v{APP_VERSION}</span>
+              </span>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <button className='new-chat-btn' title='新对话 (Ctrl+N)' onClick={() => clear()}><Plus size={16} /></button>
+              <button className='new-chat-btn' title='新建任务 (Ctrl+N)' onClick={onNewTask}><Plus size={16} /></button>
               <button className='new-chat-btn' title='收起侧边栏' onClick={onToggleCollapsed}><PanelLeftClose size={15} /></button>
             </div>
           </div>
-          <div style={{ padding: '0 12px 10px' }}>
-            <div className='input-wrap'>
-              <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input className='input' style={{ paddingLeft: 28 }} placeholder='搜索对话…' value={query} onChange={e => setQuery(e.target.value)} />
+          <div className='sidebar-nav'>
+            <button className={clsx('sidebar-nav-item', view === 'chat' && !activeSessionId && 'active')} onClick={onNewTask}><Plus size={16} /> 新建任务</button>
+            <button className={clsx('sidebar-nav-item', view === 'connectors' && 'active')} onClick={() => onNavigate('connectors')}><PlugZap size={16} /> 连接器</button>
+            <button className={clsx('sidebar-nav-item', view === 'skills' && 'active')} onClick={() => onNavigate('skills')}><Blocks size={16} /> 技能广场</button>
+            <button className={clsx('sidebar-nav-item', view === 'more' && 'active')} onClick={() => onNavigate('more')}><MoreHorizontal size={16} /> 更多</button>
+          </div>
+          <button className='sidebar-section-toggle' aria-expanded={tasksOpen} onClick={() => setTasksOpen(open => !open)}>
+            <span>最近任务 ({sessions.length})</span>
+            <ChevronDown size={13} className={clsx('section-chevron', !tasksOpen && 'collapsed')} />
+          </button>
+          {tasksOpen && (
+            <div className='sidebar-scroll'>
+              {sessions.length === 0 && (
+                <div className='muted fs-xs' style={{ textAlign: 'center', padding: '24px 8px' }}>
+                  还没有任务，点击新建任务开始
+                </div>
+              )}
+              {sessions.map(s => (
+                <div key={s.id} className={clsx('conv-item', activeSessionId === s.id && view === 'chat' && 'active')} onClick={() => openSession(s.id)}>
+                  {renamingId === s.id ? (
+                    <input className='input' style={{ height: 24, padding: '0 6px' }} autoFocus value={renameText} onChange={e => setRenameText(e.target.value)} onClick={e => e.stopPropagation()} onBlur={() => commitRename(s.id)} onKeyDown={e => { if (e.key === 'Enter') commitRename(s.id); if (e.key === 'Escape') setRenamingId(null) }} />
+                  ) : (
+                    <div className='conv-title' title='双击重命名' onDoubleClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }}>{s.task}</div>
+                  )}
+                  {renamingId !== s.id && <div className='conv-time'>{formatTime(s.updatedAt)}</div>}
+                  {renamingId !== s.id && (confirmId === s.id ? (
+                    <div className='conv-del confirm' onClick={e => { e.stopPropagation(); void deleteSession(s.id); setConfirmId(null) }}>确认</div>
+                  ) : (
+                    <>
+                      <div className='conv-del' onClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }} title='重命名'><Pencil size={12} /></div>
+                      <div className='conv-del' onClick={e => { e.stopPropagation(); setConfirmId(confirmId === s.id ? null : s.id) }} title='删除'><Trash2 size={13} /></div>
+                    </>
+                  ))}
+                </div>
+              ))}
             </div>
-          </div>
-          <div className='sidebar-label'>对话记录</div>
-          <div className='sidebar-scroll'>
-            {filtered.length === 0 && (
-              <div className='muted fs-xs' style={{ textAlign: 'center', padding: '24px 8px' }}>
-                {sessions.length === 0 ? '还没有对话，直接输入即可开始' : '没有匹配的对话'}
-              </div>
-            )}
-            {filtered.map(s => (
-              <div key={s.id} className={clsx('conv-item', activeSessionId === s.id && view === 'chat' && 'active')} onClick={() => loadSession(s.id)}>
-                {renamingId === s.id ? (
-                  <input className='input' style={{ height: 24, padding: '0 6px' }} autoFocus value={renameText} onChange={e => setRenameText(e.target.value)} onClick={e => e.stopPropagation()} onBlur={() => commitRename(s.id)} onKeyDown={e => { if (e.key === 'Enter') commitRename(s.id); if (e.key === 'Escape') setRenamingId(null) }} />
-                ) : (
-                  <div className='conv-title' title='双击重命名' onDoubleClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }}>{s.task}</div>
-                )}
-                {renamingId !== s.id && <div className='conv-time'>{formatTime(s.updatedAt)}</div>}
-                {renamingId !== s.id && (confirmId === s.id ? (
-                  <div className='conv-del confirm' onClick={e => { e.stopPropagation(); void deleteSession(s.id); setConfirmId(null) }}>确认</div>
-                ) : (
-                  <>
-                    <div className='conv-del' onClick={e => { e.stopPropagation(); setRenamingId(s.id); setRenameText(s.task) }} title='重命名'><Pencil size={12} /></div>
-                    <div className='conv-del' onClick={e => { e.stopPropagation(); setConfirmId(confirmId === s.id ? null : s.id) }} title='删除'><Trash2 size={13} /></div>
-                  </>
-                ))}
-              </div>
-            ))}
-          </div>
+          )}
+          {!tasksOpen && <div className='sidebar-spacer' />}
           <div className='sidebar-footer'>
             <div className='account-chip' title='个人账户'>
               <span className='account-avatar'><UserRound size={15} /></span>

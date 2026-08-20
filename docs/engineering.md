@@ -35,8 +35,16 @@ pnpm flow -- <command> [options]
 1. 开发前：`pnpm flow -- doctor`
 2. 改代码中：按影响范围运行 `pnpm flow -- check`
 3. 改安全、权限、持久化、IPC、Agent 工具：必须补或更新测试
-4. 提交前：`pnpm flow -- check --include-build`
-5. 发版前：`pnpm flow -- release --target win`
+4. 功能和修复改动：按语义化版本号同步更新 `package.json` 与 `src/shared/app-meta.ts`
+5. 提交前：`pnpm flow -- check --include-build`
+6. 发版前：`pnpm flow -- release --target win`
+
+## 版本规则
+
+- `feat`：新增产品能力或可见功能，升 minor，例如 `1.4.0` → `1.5.0`。
+- `fix`：修复缺陷且不改变兼容性，升 patch，例如 `1.5.0` → `1.5.1`。
+- 破坏性变更：升 major，例如 `1.x.x` → `2.0.0`。
+- UI 读取 `src/shared/app-meta.ts` 的 `APP_VERSION`；测试会校验它与 `package.json` 版本一致。
 
 ## 远端工程化
 
