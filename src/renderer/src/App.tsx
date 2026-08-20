@@ -71,7 +71,7 @@ export default function App() {
       <div className='app-body'>
         <Sidebar view={view} onOpenSettings={() => setView('settings')} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(c => !c)} />
         <main className='app-main'>
-          {view === 'chat' ? <AgentView /> : <SettingsView onBack={() => setView('chat')} />}
+          {view === 'chat' ? <AgentView onOpenSettings={() => setView('settings')} /> : <SettingsView onBack={() => setView('chat')} />}
         </main>
       </div>
     </div>

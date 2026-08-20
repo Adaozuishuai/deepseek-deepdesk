@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { ArrowDown, Check, ChevronDown, Copy, FolderOpen, Pencil, RefreshCw, Square, Terminal, ThumbsDown, ThumbsUp, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { ArrowDown, Check, ChevronDown, Copy, FolderOpen, Gauge, Pencil, RefreshCw, Square, Terminal, ThumbsDown, ThumbsUp, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { formatTokens } from '../../lib/format'
 import Markdown from '../chat/Markdown'
 import { copyText } from '../../lib/utils'
+import DeepSeekLogo from '../DeepSeekLogo'
 import '../../assets/agent.css'
 
 function estimateTokens(history: Array<Record<string, unknown>>): number {
@@ -193,24 +194,20 @@ function StepItem({ step, index, isLastMessage }: { step: AgentStep; index: numb
   }
 }
 
-export default function AgentView() {
-  const steps = useAgentStore(s => s.steps)
+function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
   const running = useAgentStore(s => s.running)
   const workdir = useAgentStore(s => s.workdir)
-  const pendingApproval = useAgentStore(s => s.pendingApproval)
-  const error = useAgentStore(s => s.error)
   const history = useAgentStore(s => s.history)
   const start = useAgentStore(s => s.start)
   const stop = useAgentStore(s => s.stop)
-  const approve = useAgentStore(s => s.approve)
   const pickDirectory = useAgentStore(s => s.pickDirectory)
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
   const [text, setText] = useState('')
-  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const [openMenu, setOpenMenu] = useState<'model' | 'permission' | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const [maxMode, setMaxMode] = useState(false)
+  const [autoModelMode, setAutoModelMode] = useState(true)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -219,8 +216,16 @@ export default function AgentView() {
   const mode = settings?.agentPermissionMode ?? 'ask'
   const modeLabel = mode === 'full' ? '完全访问' : mode === 'auto' ? '替我审批' : '每次询问'
   const models = provider?.models ?? []
-  const modelLabel = models.find(item => item.id === settings?.defaultModelId)?.name ?? settings?.defaultModelId ?? '选择模型'
-  const lastMessageIndex = steps.reduce((last, step, index) => step.kind === 'task' || step.kind === 'text' ? index : last, -1)
+  const selectedModel = models.find(item => item.id === settings?.defaultModelId)
+  const selectedModelLabel = selectedModel?.name ?? settings?.defaultModelId ?? '选择模型'
+  const modelButtonLabel = autoModelMode ? 'Auto' : selectedModelLabel
+  const isDeepSeekModel = (model: { id: string; name?: string }): boolean => {
+    const text = (model.id + ' ' + (model.name ?? '')).toLowerCase()
+    return text.includes('deepseek')
+  }
+  const modelButtonIcon = autoModelMode ? <RefreshCw size={14} /> : selectedModel && isDeepSeekModel(selectedModel)
+    ? <DeepSeekLogo className='model-logo' width={15} height={15} aria-hidden />
+    : <span className='model-mark compact'>{selectedModelLabel.trim().charAt(0).toUpperCase()}</span>
 
   useEffect(() => {
     const closeMenu = (event: PointerEvent): void => {
@@ -236,6 +241,108 @@ export default function AgentView() {
     ta.style.height = 'auto'
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px'
   }, [text])
+
+  const submit = async (): Promise<void> => {
+    if (!text.trim() || running) return
+    setText('')
+    await start(text)
+  }
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
+  }
+
+  return (
+    <div className='agent-composer' ref={menuRef}>
+      <textarea
+        ref={taRef}
+        className='composer-textarea'
+        placeholder='发消息，或让我帮你做点事…'
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={onKeyDown}
+        rows={1}
+      />
+      <div className='composer-actions'>
+        <div className='composer-left'>
+          <div className='composer-menu'>
+            <button className='toolbar-item composer-menu-trigger' aria-expanded={openMenu === 'permission'} onClick={() => setOpenMenu(openMenu === 'permission' ? null : 'permission')} title='选择权限模式'>
+              {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
+              <span>{modeLabel}</span><ChevronDown size={12} />
+            </button>
+            {openMenu === 'permission' && (
+              <div className='composer-menu-popover' role='menu' aria-label='选择权限模式'>
+                {([['ask', '每次询问'], ['auto', '替我审批'], ['full', '完全访问']] as const).map(([value, label]) => (
+                  <button key={value} className='composer-menu-option' role='menuitemradio' aria-checked={mode === value} onClick={() => { void updateSettings({ agentPermissionMode: value }); setOpenMenu(null) }}>
+                    <span>{label}</span>{mode === value && <Check size={14} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
+            <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
+          </button>
+        </div>
+        <div className='composer-right'>
+          <div className='composer-menu'>
+            <button className='toolbar-item composer-menu-trigger composer-model-trigger' aria-expanded={openMenu === 'model'} onClick={() => setOpenMenu(openMenu === 'model' ? null : 'model')} title='选择模型'>
+              {modelButtonIcon}
+              <span>{modelButtonLabel}</span><ChevronDown size={12} />
+            </button>
+            {openMenu === 'model' && (
+              <div className='composer-menu-popover composer-model-popover' role='menu' aria-label='选择模型'>
+                <div className='model-menu-header'>
+                  <div className='model-menu-title'><Gauge size={15} /> Max 模式</div>
+                  <button type='button' className={clsx('model-max-switch', maxMode && 'on')} role='switch' aria-checked={maxMode} aria-label='Max 模式' onClick={() => setMaxMode(value => !value)}>
+                    <span />
+                  </button>
+                </div>
+                <button className='model-menu-option auto' role='menuitemradio' aria-checked={autoModelMode} onClick={() => { setAutoModelMode(true); setOpenMenu(null) }}>
+                  <span className='model-option-main'><RefreshCw size={16} /><span>Auto</span></span>
+                  {autoModelMode && <Check size={15} />}
+                </button>
+                <div className='model-menu-list'>
+                {models.map(item => (
+                  <button key={item.id} className='model-menu-option' role='menuitemradio' aria-checked={!autoModelMode && settings?.defaultModelId === item.id} onClick={() => { setAutoModelMode(false); void updateSettings({ defaultModelId: item.id }); setOpenMenu(null) }}>
+                    <span className='model-option-main'>
+                      {isDeepSeekModel(item) ? <DeepSeekLogo className='model-logo' width={18} height={18} aria-hidden /> : <span className='model-mark'>{(item.name ?? item.id).trim().charAt(0).toUpperCase()}</span>}
+                      <span className='model-name'>{item.name ?? item.id}</span>
+                    </span>
+                    <span className='model-price'>{item.id === settings?.defaultModelId && !autoModelMode ? <Check size={15} /> : '0.79x'}</span>
+                  </button>
+                ))}
+                </div>
+                <button className='model-menu-config' role='menuitem' onClick={() => { setOpenMenu(null); onOpenSettings() }}>
+                  <Pencil size={15} />
+                  <span>配置自定义模型</span>
+                </button>
+              </div>
+            )}
+          </div>
+          <ContextMeter history={history} contextWindow={contextWindow} />
+          {running ? (
+            <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
+          ) : (
+            <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='发送'><svg viewBox='0 0 16 16' width='16' height='16' aria-hidden><path d='M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z' fill='currentColor' /></svg></button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AgentView({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const steps = useAgentStore(s => s.steps)
+  const workdir = useAgentStore(s => s.workdir)
+  const pendingApproval = useAgentStore(s => s.pendingApproval)
+  const error = useAgentStore(s => s.error)
+  const approve = useAgentStore(s => s.approve)
+  const pickDirectory = useAgentStore(s => s.pickDirectory)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const lastMessageIndex = steps.reduce((last, step, index) => step.kind === 'task' || step.kind === 'text' ? index : last, -1)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -265,16 +372,6 @@ export default function AgentView() {
     setShowScrollToBottom(false)
   }
 
-  const submit = async (): Promise<void> => {
-    if (!text.trim() || running) return
-    setText('')
-    await start(text)
-  }
-
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
-  }
-
   return (
     <div className='agent-view'>
       {error && <div className='agent-error' style={{ margin: '10px 24px 0' }}>{error}</div>}
@@ -296,6 +393,9 @@ export default function AgentView() {
           <div className='quick-chips'>
             <button className='quick-chip' onClick={() => void pickDirectory()}><FolderOpen size={13} /> {workdir || '选择工作目录'}</button>
           </div>
+          <div className='agent-empty-composer'>
+            <AgentComposer onOpenSettings={onOpenSettings} />
+          </div>
         </div>
       ) : (
         <div className='agent-scroll' ref={scrollRef}>
@@ -304,68 +404,16 @@ export default function AgentView() {
           </div>
         </div>
       )}
-      <div className='agent-footer'>
-        {showScrollToBottom && (
-          <button type='button' className='scroll-to-bottom' title='回到底部' aria-label='回到底部' onClick={scrollToBottom}>
-            <ArrowDown size={17} />
-          </button>
-        )}
-        <div className='agent-composer' ref={menuRef}>
-          <textarea
-            ref={taRef}
-            className='composer-textarea'
-            placeholder='发消息，或让我帮你做点事…'
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={onKeyDown}
-            rows={1}
-          />
-          <div className='composer-actions'>
-            <div className='composer-left'>
-              <div className='composer-menu'>
-                <button className='toolbar-item composer-menu-trigger' aria-expanded={openMenu === 'permission'} onClick={() => setOpenMenu(openMenu === 'permission' ? null : 'permission')} title='选择权限模式'>
-                  {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
-                  <span>{modeLabel}</span><ChevronDown size={12} />
-                </button>
-                {openMenu === 'permission' && (
-                  <div className='composer-menu-popover' role='menu' aria-label='选择权限模式'>
-                    {([['ask', '每次询问'], ['auto', '替我审批'], ['full', '完全访问']] as const).map(([value, label]) => (
-                      <button key={value} className='composer-menu-option' role='menuitemradio' aria-checked={mode === value} onClick={() => { void updateSettings({ agentPermissionMode: value }); setOpenMenu(null) }}>
-                        <span>{label}</span>{mode === value && <Check size={14} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
-                <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
-              </button>
-            </div>
-            <div className='composer-right'>
-              <div className='composer-menu'>
-                <button className='toolbar-item composer-menu-trigger composer-model-trigger' aria-expanded={openMenu === 'model'} onClick={() => setOpenMenu(openMenu === 'model' ? null : 'model')} title='选择模型'>
-                  <span>{modelLabel}</span><ChevronDown size={12} />
-                </button>
-                {openMenu === 'model' && (
-                  <div className='composer-menu-popover composer-model-popover' role='menu' aria-label='选择模型'>
-                    {models.map(item => (
-                      <button key={item.id} className='composer-menu-option' role='menuitemradio' aria-checked={settings?.defaultModelId === item.id} onClick={() => { void updateSettings({ defaultModelId: item.id }); setOpenMenu(null) }}>
-                        <span>{item.name ?? item.id}</span>{settings?.defaultModelId === item.id && <Check size={14} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <ContextMeter history={history} contextWindow={contextWindow} />
-              {running ? (
-                <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
-              ) : (
-                <button className='send-btn' disabled={!text.trim()} onClick={() => void submit()} title='发送'><svg viewBox='0 0 16 16' width='16' height='16' aria-hidden><path d='M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z' fill='currentColor' /></svg></button>
-              )}
-            </div>
-          </div>
+      {steps.length > 0 && (
+        <div className='agent-footer'>
+          {showScrollToBottom && (
+            <button type='button' className='scroll-to-bottom' title='回到底部' aria-label='回到底部' onClick={scrollToBottom}>
+              <ArrowDown size={17} />
+            </button>
+          )}
+          <AgentComposer onOpenSettings={onOpenSettings} />
         </div>
-      </div>
+      )}
     </div>
   )
 }
