@@ -8,8 +8,15 @@
 .toolbar-item:hover { color: var(--text); background: var(--bg-hover); }
 .toolbar-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toolbar-model { font-size: var(--fs-sm); color: var(--text-muted); white-space: nowrap; }
-.composer-select { max-width: 200px; height: 28px; padding: 0 22px 0 9px; border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; background-color: transparent; background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%); background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%; background-size: 4px 4px; background-repeat: no-repeat; color: var(--text-secondary); font-size: var(--fs-xs); font-weight: 500; white-space: nowrap; cursor: pointer; appearance: none; }
-.composer-select:hover { background-color: var(--bg-hover); color: var(--text); border-color: var(--border-strong); }
+.composer-menu { position: relative; }
+.composer-menu-trigger { max-width: 220px; border-color: var(--border); background: var(--menu-surface); }
+.composer-model-trigger { max-width: 190px; }
+.composer-menu-popover { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 100; display: flex; min-width: 156px; padding: 4px; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; background: var(--menu-surface); box-shadow: var(--shadow-float); }
+.composer-model-popover { right: 0; left: auto; min-width: 210px; }
+.composer-menu-option { display: flex; align-items: center; justify-content: space-between; min-height: 32px; gap: 18px; padding: 6px 8px; border: none; border-radius: 7px; background: transparent; color: var(--text-secondary); font-size: var(--fs-xs); text-align: left; cursor: pointer; }
+.composer-menu-option:hover, .composer-menu-option[aria-checked='true'] { background: var(--menu-option-active); color: var(--text); }
+.composer-menu-popover:has(.composer-menu-option:hover) .composer-menu-option[aria-checked='true']:not(:hover) { background: transparent; color: var(--text-secondary); }
+.composer-menu-option:focus-visible, .composer-menu-trigger:focus-visible, .toolbar-item:focus-visible { outline: none; background: var(--bg-hover); }
 .ctx-meter { position: relative; display: inline-flex; }
 .ctx-trigger { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border: none; border-radius: 999px; background: transparent; color: var(--text-secondary); cursor: pointer; }
 .ctx-trigger:hover { background: var(--bg-hover); }
@@ -21,7 +28,7 @@
 .ctx-percent { font-weight: 500; color: var(--text); }
 .ctx-bar { display: flex; margin: 10px 0 2px; height: 4px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
 .ctx-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
-.agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: none; transition: border-color 150ms ease, box-shadow 150ms ease; overflow: hidden; }
+.agent-composer { max-width: 820px; margin: 0 auto; padding: 8px 0 0; display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: none; transition: border-color 150ms ease, box-shadow 150ms ease; overflow: visible; }
 .agent-composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
 .agent-task { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--accent-soft); border: 1px solid var(--accent-soft); font-size: var(--fs-base); line-height: 1.6; user-select: text; }
@@ -61,3 +68,18 @@
 .mode-tab { flex: 1; padding: 5px 0; border-radius: 7px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); cursor: pointer; border: none; background: transparent; transition: all 0.13s ease; }
 .mode-tab:hover { color: var(--text); }
 .mode-tab.active { background: var(--bg-elevated); color: var(--text); box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25); border: 1px solid var(--border); }
+
+/* 会话消息与操作：视觉保持克制，交互始终可达。 */
+.agent-message { display: flex; flex-direction: column; min-width: 0; }
+.agent-message.user { align-self: flex-end; max-width: 82%; align-items: flex-end; }
+.agent-message.assistant { align-self: stretch; }
+.agent-message .agent-task { width: fit-content; max-width: 100%; }
+.agent-message-actions { display: flex; min-height: 28px; gap: 2px; margin-top: 3px; opacity: 0; transition: opacity 120ms ease; }
+.agent-message:hover .agent-message-actions, .agent-message:focus-within .agent-message-actions { opacity: 1; }
+.agent-message.user .agent-message-actions { justify-content: flex-end; }
+.agent-message.is-last-message { position: relative; }
+.agent-message.is-last-message .last-message-actions { position: absolute; top: calc(100% + 3px); min-height: 0; margin-top: 0; }
+.agent-message.is-last-message.assistant .last-message-actions { left: 0; }
+.agent-message.is-last-message.user .last-message-actions { right: 0; }
+.agent-message-editor { box-sizing: border-box; width: min(520px, 100%); min-height: 72px; padding: 10px 14px; resize: vertical; border: 1px solid var(--border-strong); border-radius: 14px; outline: none; background: var(--bg-elevated); color: var(--text); font: inherit; line-height: 1.65; }
+.agent-message-editor:focus { border-color: var(--accent); }

@@ -44,6 +44,40 @@ export function createLongAgentSessionUserData(): string {
   return userDataDir
 }
 
+export function createMessageActionsUserData(): string {
+  const userDataDir = mkdtempSync(join(tmpdir(), 'deepdesk-e2e-'))
+  const state = {
+    settings: {
+      version: 1,
+      defaultProviderId: 'deepseek',
+      defaultModelId: 'deepseek-v4-flash',
+      temperature: 1,
+      theme: 'light',
+      enterToSend: true,
+      agentWorkdir: '',
+      agentPermissionMode: 'ask'
+    },
+    providers: [],
+    conversations: [],
+    agentSessions: [{
+      id: 'message-actions',
+      task: '消息操作视觉回归',
+      workdir: '',
+      createdAt: 1,
+      updatedAt: 1,
+      providerId: 'deepseek',
+      modelId: 'deepseek-v4-flash',
+      steps: [
+        { kind: 'task', text: '你看看这个是什么类型' },
+        { kind: 'text', text: '这是 TypeScript 示例：\n\n```ts\nexport const greeting = \'Hello, DeepDesk\'\n```' }
+      ],
+      history: []
+    }]
+  }
+  writeFileSync(join(userDataDir, 'deepdesk.json'), JSON.stringify(state), 'utf8')
+  return userDataDir
+}
+
 export async function launchDeepDesk(userDataDir = mkdtempSync(join(tmpdir(), 'deepdesk-e2e-'))): Promise<DeepDeskE2EApp> {
   const app = await electron.launch({
     args: ['.'],
@@ -86,7 +120,7 @@ export async function goBackToChat(page: Page): Promise<void> {
 
 export async function expectComposerReady(page: Page): Promise<void> {
   await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
-  await expect(page.locator('.composer-select')).toBeVisible()
+  await expect(page.getByTitle('选择模型')).toBeVisible()
   await expect(page.locator('.ctx-trigger')).toBeVisible()
 }
 

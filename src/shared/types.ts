@@ -33,6 +33,7 @@ export interface ChatMessage {
   error?: boolean
   model?: string
   streaming?: boolean
+  feedback?: 'positive' | 'negative'
 }
 
 export interface Conversation {

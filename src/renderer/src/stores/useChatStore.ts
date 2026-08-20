@@ -120,6 +120,7 @@ interface ChatState {
   stopStreaming: () => void
   regenerate: () => Promise<void>
   editAndResend: (messageId: string, newText: string) => Promise<void>
+  setMessageFeedback: (messageId: string, feedback: 'positive' | 'negative') => void
   dismissNotice: () => void
 }
 
@@ -264,6 +265,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     conv.messages = conv.messages.slice(0, idx)
     set({ conversations: replaceConv(get().conversations, conv) })
     await get().sendMessage(newText)
+  },
+  setMessageFeedback: (messageId, feedback) => {
+    const conv = get().conversations.find(c => c.id === get().activeId)
+    const message = conv?.messages.find(item => item.id === messageId)
+    if (!conv || !message || message.role !== 'assistant') return
+    message.feedback = message.feedback === feedback ? undefined : feedback
+    get().updateConversation(conv)
   },
   dismissNotice: () => set({ notice: null })
 }))
