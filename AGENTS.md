@@ -70,6 +70,7 @@ pnpm release:win  # 完整门禁 + Windows 打包
 - 字符串与 JSX 属性用单引号。
 - 异步副作用显式 `void fn()` 标记，避免浮空 Promise。
 - 提交信息用 Conventional Commits：`feat` / `fix` / `chore` / `docs` / `refactor` / `test`。
+- 功能和修复必须同步更新语义化版本号：`feat` 升 minor，`fix` 升 patch，破坏性变更升 major；`package.json` 与 `src/shared/app-meta.ts` 必须保持一致。
 
 ## 测试
 

@@ -39,15 +39,14 @@ function formatWorkdirName(workdir: string): string {
   return parts.at(-1) ?? normalized
 }
 
-function ContextMeter({ history, contextWindow }: { history: Array<Record<string, unknown>>; contextWindow: number }) {
-  const [open, setOpen] = useState(false)
+function ContextMeter({ history, contextWindow, open, onToggle }: { history: Array<Record<string, unknown>>; contextWindow: number; open: boolean; onToggle: () => void }) {
   const used = estimateTokens(history)
   const percent = Math.min(100, Math.round(used / contextWindow * 100))
   const RADIUS = 5.5
   const CIRC = 2 * Math.PI * RADIUS
   return (
     <span className='ctx-meter'>
-      <button className='ctx-trigger' onClick={() => setOpen(o => !o)} title='上下文用量'>
+      <button className='ctx-trigger' aria-expanded={open} onClick={onToggle} title='上下文用量'>
         <svg viewBox='0 0 14 14' width='14' height='14' aria-hidden>
           <circle className='ctx-track' cx='7' cy='7' r={RADIUS} />
           <circle className='ctx-fill' cx='7' cy='7' r={RADIUS} strokeDasharray={CIRC * percent / 100 + ' ' + CIRC} transform='rotate(-90 7 7)' />
@@ -205,14 +204,16 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
   const running = useAgentStore(s => s.running)
   const workdir = useAgentStore(s => s.workdir)
   const history = useAgentStore(s => s.history)
+  const draftTask = useAgentStore(s => s.draftTask)
   const start = useAgentStore(s => s.start)
   const stop = useAgentStore(s => s.stop)
   const pickDirectory = useAgentStore(s => s.pickDirectory)
+  const setDraftTask = useAgentStore(s => s.setDraftTask)
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
   const [text, setText] = useState('')
-  const [openMenu, setOpenMenu] = useState<'model' | 'permission' | null>(null)
+  const [openMenu, setOpenMenu] = useState<'model' | 'permission' | 'context' | null>(null)
   const [maxMode, setMaxMode] = useState(false)
   const [autoModelMode, setAutoModelMode] = useState(true)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -251,6 +252,13 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px'
   }, [text])
 
+  useEffect(() => {
+    if (!draftTask) return
+    setText(draftTask)
+    setDraftTask('')
+    window.setTimeout(() => taRef.current?.focus(), 0)
+  }, [draftTask, setDraftTask])
+
   const submit = async (): Promise<void> => {
     if (!text.trim() || running) return
     setText('')
@@ -261,8 +269,15 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submit() }
   }
 
+  const closeFloatingOnComposerBackground = (event: React.PointerEvent<HTMLDivElement>): void => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    if (target.closest('.composer-menu, .ctx-meter')) return
+    setOpenMenu(null)
+  }
+
   return (
-    <div className='agent-composer' ref={menuRef}>
+    <div className='agent-composer' ref={menuRef} onPointerDownCapture={closeFloatingOnComposerBackground}>
       <textarea
         ref={taRef}
         className='composer-textarea'
@@ -329,7 +344,7 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
               </div>
             )}
           </div>
-          <ContextMeter history={history} contextWindow={contextWindow} />
+          <ContextMeter history={history} contextWindow={contextWindow} open={openMenu === 'context'} onToggle={() => setOpenMenu(openMenu === 'context' ? null : 'context')} />
           {running ? (
             <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>
           ) : (

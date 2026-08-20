@@ -122,21 +122,72 @@ test('centers the empty conversation composer with the welcome content', async (
   expect(layout!.composerBottomRatio).toBeLessThan(0.82)
 })
 
-test('supports sidebar collapse, expand, and new conversation action', async () => {
+test('supports sidebar collapse, expand, and new task action', async () => {
   await expect(page.locator('.sidebar')).toBeVisible()
+  await expect(page.getByRole('button', { name: /最近任务 \(0\)/ })).toHaveAttribute('aria-expanded', 'true')
 
   await page.getByTitle('收起侧边栏').click()
 
   await expect(page.locator('.sidebar.collapsed')).toBeVisible()
   await expect(page.getByTitle('展开侧边栏')).toBeVisible()
 
-  await page.getByTitle('新对话').click()
+  await page.getByTitle('新建任务').click()
   await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
 
   await page.getByTitle('展开侧边栏').click()
 
   await expect(page.locator('.sidebar:not(.collapsed)')).toBeVisible()
   await expect(page.locator('.brand', { hasText: 'DeepDesk' })).toBeVisible()
+  await expect(page.locator('.brand-version')).toHaveText(/^v\d+\.\d+\.\d+$/)
+})
+
+test('opens sidebar feature pages and applies a skill template', async () => {
+  await page.getByRole('button', { name: '连接器' }).click()
+  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 连接器' })).toBeVisible()
+  await expect(page.locator('.hub-header', { hasText: '连接器' })).toBeVisible()
+  await page.getByRole('button', { name: '打开模型服务设置' }).click()
+  await expect(page.locator('.settings-title', { hasText: '模型服务' })).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: '技能广场' }).click()
+  await page.setViewportSize({ width: 1050, height: 720 })
+  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 技能广场' })).toBeVisible()
+  await expect(page.locator('.skill-section-head', { hasText: '精选技能' })).toBeVisible()
+  const skillToolbarLayout = await page.evaluate(() => {
+    const controls = Array.from(document.querySelectorAll<HTMLElement>('.skill-top-tab, .skill-pill'))
+    const avatar = document.querySelector<HTMLElement>('.skill-avatar')
+    return {
+      controls: controls.map(control => ({
+        height: Math.round(control.getBoundingClientRect().height),
+        whiteSpace: getComputedStyle(control).whiteSpace
+      })),
+      avatar: avatar
+        ? {
+            width: Math.round(avatar.getBoundingClientRect().width),
+            borderRadius: getComputedStyle(avatar).borderTopLeftRadius
+          }
+        : null
+    }
+  })
+  expect(skillToolbarLayout.controls.length).toBeGreaterThan(0)
+  expect(skillToolbarLayout.controls.every(control => control.whiteSpace === 'nowrap' && control.height <= 38)).toBe(true)
+  expect(skillToolbarLayout.avatar).not.toBeNull()
+  expect(skillToolbarLayout.avatar!.borderRadius === '50%' || Number.parseFloat(skillToolbarLayout.avatar!.borderRadius) >= skillToolbarLayout.avatar!.width / 2).toBe(true)
+  await page.getByPlaceholder('搜索技能').fill('UI')
+  const uiSkillCard = page.locator('.skill-grid .skill-card', { hasText: 'UI 走查' })
+  await expect(uiSkillCard).toBeVisible()
+  await uiSkillCard.getByTitle('取消安装').click()
+  await page.getByRole('button', { name: /我安装的/ }).click()
+  await expect(uiSkillCard).toBeHidden()
+  await page.getByRole('button', { name: /我安装的/ }).click()
+  await uiSkillCard.getByTitle('安装技能').click()
+  await uiSkillCard.getByRole('button', { name: '使用技能' }).click()
+  await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toHaveValue(/UI 做一次走查/)
+
+  await page.getByRole('button', { name: '更多' }).click()
+  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 更多' })).toBeVisible()
+  await page.locator('.hub-card', { hasText: '设置' }).getByRole('button', { name: '打开设置' }).click()
+  await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 })
 
 test('supports global settings shortcuts and sidebar account footer', async () => {
@@ -161,11 +212,47 @@ test('supports global settings shortcuts and sidebar account footer', async () =
 
 test('selects agent permission mode from the gray composer menu', async () => {
   const permissionButton = page.getByTitle('选择权限模式')
+  const modelButton = page.getByTitle('选择模型')
 
   await expect(permissionButton).toContainText('每次询问')
 
   await permissionButton.click()
   const menu = page.getByRole('menu', { name: '选择权限模式' })
+  await expect(menu).toBeVisible()
+  const permissionStyle = await menu.evaluate(element => {
+    const option = element.querySelector<HTMLElement>('[role="menuitemradio"]')
+    const style = getComputedStyle(element)
+    const optionStyle = option ? getComputedStyle(option) : null
+    return {
+      backgroundColor: style.backgroundColor,
+      borderRadius: style.borderTopLeftRadius,
+      boxShadow: style.boxShadow,
+      paddingTop: style.paddingTop,
+      optionBorderRadius: optionStyle?.borderTopLeftRadius ?? '',
+      optionHeight: option ? Math.round(option.getBoundingClientRect().height) : 0
+    }
+  })
+  await modelButton.click()
+  const modelMenu = page.getByRole('menu', { name: '选择模型' })
+  await expect(modelMenu).toBeVisible()
+  await expect(menu).toBeHidden()
+  const modelStyle = await modelMenu.evaluate(element => {
+    const option = element.querySelector<HTMLElement>('[role="menuitemradio"]')
+    const style = getComputedStyle(element)
+    const optionStyle = option ? getComputedStyle(option) : null
+    return {
+      backgroundColor: style.backgroundColor,
+      borderRadius: style.borderTopLeftRadius,
+      boxShadow: style.boxShadow,
+      paddingTop: style.paddingTop,
+      optionBorderRadius: optionStyle?.borderTopLeftRadius ?? '',
+      optionHeight: option ? Math.round(option.getBoundingClientRect().height) : 0
+    }
+  })
+  expect(permissionStyle).toEqual(modelStyle)
+
+  await permissionButton.click()
+  await expect(modelMenu).toBeHidden()
   await expect(menu).toBeVisible()
   await menu.getByRole('menuitemradio', { name: '替我审批' }).click()
   await expect(permissionButton).toContainText('替我审批')
@@ -209,7 +296,7 @@ test('selects a model from the polished composer model picker', async () => {
 })
 
 test('selects a mock agent work directory without opening a native dialog', async () => {
-  const directoryPicker = page.locator('.agent-composer .toolbar-item[title="选择工作目录"]')
+  const directoryPicker = page.locator('.agent-composer .composer-left > .toolbar-item')
 
   await directoryPicker.click()
 
@@ -292,6 +379,23 @@ test('supports multiline composer input and context meter panel', async () => {
   await page.locator('.ctx-trigger').click()
   await expect(page.locator('.ctx-panel')).toBeVisible()
   await expect(page.locator('.ctx-panel', { hasText: '上下文已用' })).toBeVisible()
+
+  await page.getByTitle('选择模型').click()
+  const modelMenu = page.getByRole('menu', { name: '选择模型' })
+  await expect(modelMenu).toBeVisible()
+  await expect(page.locator('.ctx-panel')).toBeHidden()
+
+  await page.locator('.ctx-trigger').click()
+  await expect(page.locator('.ctx-panel')).toBeVisible()
+  await expect(modelMenu).toBeHidden()
+
+  await textarea.click()
+  await expect(page.locator('.ctx-panel')).toBeHidden()
+
+  await page.getByTitle('选择模型').click()
+  await expect(modelMenu).toBeVisible()
+  await textarea.click()
+  await expect(modelMenu).toBeHidden()
 })
 
 test('adds, edits, adds model, and deletes a custom provider without network calls', async () => {
@@ -352,6 +456,15 @@ test('places the scroll-to-bottom control above the composer in a long agent ses
   page = ctx.page
 
   const session = page.locator('.conv-item', { hasText: '长对话视觉回归' })
+  const taskToggle = page.getByRole('button', { name: /最近任务 \(1\)/ })
+  await expect(taskToggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(session).toBeVisible()
+  await taskToggle.click()
+  await expect(taskToggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(session).toBeHidden()
+  await taskToggle.click()
+  await expect(taskToggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(session).toBeVisible()
   await session.click()
 
   const scroll = page.locator('.agent-scroll')

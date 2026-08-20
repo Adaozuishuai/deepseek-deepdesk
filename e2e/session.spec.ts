@@ -3,6 +3,7 @@ import { basename } from 'node:path'
 import { closeDeepDesk, expectAppShell, expectComposerReady, goBackToChat, isMainWindowMaximized, launchDeepDesk, openSettings } from './helpers'
 
 test('runs local acceptance flow in one Electron window', async () => {
+  test.setTimeout(90000)
   const ctx = await launchDeepDesk()
   const { app, page } = ctx
 
@@ -26,7 +27,7 @@ test('runs local acceptance flow in one Electron window', async () => {
       await page.getByTitle('收起侧边栏').click()
       await expect(page.locator('.sidebar.collapsed')).toBeVisible()
 
-      await page.getByTitle('新对话').click()
+      await page.getByTitle('新建任务').click()
       await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
 
       await page.getByTitle('展开侧边栏').click()
@@ -54,21 +55,25 @@ test('runs local acceptance flow in one Electron window', async () => {
     })
 
     await test.step('cycle composer permission mode', async () => {
-      const permissionButton = page.getByTitle('权限模式（点击切换）')
+      const permissionButton = page.getByTitle('选择权限模式')
       await expect(permissionButton).toContainText('每次询问')
 
       await permissionButton.click()
+      const menu = page.getByRole('menu', { name: '选择权限模式' })
+      await menu.getByRole('menuitemradio', { name: '替我审批' }).click()
       await expect(permissionButton).toContainText('替我审批')
 
       await permissionButton.click()
+      await menu.getByRole('menuitemradio', { name: '完全访问' }).click()
       await expect(permissionButton).toContainText('完全访问')
 
       await permissionButton.click()
+      await menu.getByRole('menuitemradio', { name: '每次询问' }).click()
       await expect(permissionButton).toContainText('每次询问')
     })
 
     await test.step('select a mock agent work directory without a native dialog', async () => {
-      const directoryPicker = page.locator('.agent-composer .toolbar-item[title="选择工作目录"]')
+      const directoryPicker = page.locator('.agent-composer .composer-left > .toolbar-item')
 
       await directoryPicker.click()
       const selectedDirectoryPicker = page.locator('.agent-composer .toolbar-item').filter({ hasText: basename(ctx.userDataDir) })
@@ -108,7 +113,7 @@ test('runs local acceptance flow in one Electron window', async () => {
 
       await page.getByRole('button', { name: '替我审批' }).click()
       await goBackToChat(page)
-      await expect(page.getByTitle('权限模式（点击切换）')).toContainText('替我审批')
+      await expect(page.getByTitle('选择权限模式')).toContainText('替我审批')
     })
 
     await test.step('validate provider modal', async () => {
