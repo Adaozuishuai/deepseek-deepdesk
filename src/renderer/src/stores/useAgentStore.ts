@@ -24,6 +24,9 @@ interface AgentState {
   loadSession: (id: string) => void
   deleteSession: (id: string) => Promise<void>
   renameSession: (id: string, title: string) => Promise<void>
+  updateStep: (index: number, patch: Partial<AgentStep>) => void
+  setStepFeedback: (index: number, feedback: 'positive' | 'negative') => void
+  regenerateFrom: (index: number) => Promise<void>
   clear: () => void
 }
 
@@ -84,7 +87,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       task: s.currentTask,
       workdir: s.workdir,
       modelId: s.currentModelId,
-      createdAt: Date.now(),
+      createdAt: s.sessions.find(item => item.id === s.currentSessionId)?.createdAt ?? Date.now(),
       updatedAt: Date.now(),
       steps: s.steps,
       history: s.history
@@ -169,7 +172,7 @@ export const useAgentStore = create<AgentState>()((set, get) => {
     loadSession: (id) => {
       const s = get().sessions.find(x => x.id === id)
       if (!s) return
-      set({ steps: s.steps, currentTask: s.task, workdir: s.workdir, history: s.history ?? [], currentSessionId: id, activeSessionId: id, running: false, currentRunId: null, pendingApproval: null, error: null })
+      set({ steps: s.steps, currentTask: s.task, currentModelId: s.modelId, workdir: s.workdir, history: s.history ?? [], currentSessionId: id, activeSessionId: id, running: false, currentRunId: null, pendingApproval: null, error: null })
     },
     deleteSession: async (id) => {
       await window.api.agent.deleteSession(id)
@@ -180,6 +183,30 @@ export const useAgentStore = create<AgentState>()((set, get) => {
       if (!t) return
       await window.api.agent.renameSession(id, t)
       set({ sessions: get().sessions.map(s => (s.id === id ? { ...s, task: t } : s)) })
+    },
+    updateStep: (index, patch) => {
+      set(s => ({ steps: s.steps.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step) }))
+      saveCurrentSession()
+    },
+    setStepFeedback: (index, feedback) => {
+      const step = get().steps[index]
+      if (!step || step.kind !== 'text') return
+      get().updateStep(index, { feedback: step.feedback === feedback ? undefined : feedback })
+    },
+    regenerateFrom: async (index) => {
+      if (get().running) return
+      const steps = get().steps
+      let taskIndex = -1
+      for (let current = index - 1; current >= 0; current -= 1) {
+        if (steps[current].kind === 'task') {
+          taskIndex = current
+          break
+        }
+      }
+      const task = taskIndex >= 0 ? steps[taskIndex].text?.trim() : ''
+      if (!task) return
+      set({ steps: steps.slice(0, taskIndex), history: [] })
+      await get().start(task)
     },
     clear: () => {
       if (get().running) get().stop()

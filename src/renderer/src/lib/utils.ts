@@ -27,6 +27,16 @@ export function copyText(text: string): Promise<boolean> {
   })
 }
 
+export function downloadTextFile(filename: string, text: string): void {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function fallbackCopy(text: string): boolean {
   const ta = document.createElement('textarea')
   ta.value = text

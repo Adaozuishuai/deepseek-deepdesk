@@ -54,6 +54,7 @@ export interface AgentStep {
   summary?: string
   result?: string
   message?: string
+  feedback?: 'positive' | 'negative'
 }
 
 export interface AgentSession {

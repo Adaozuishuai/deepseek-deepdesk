@@ -168,4 +168,20 @@ describe('useChatStore', () => {
     expect(startRequests[1].messages[0].content).toBe('修改后的问题')
     expect(useChatStore.getState().conversations[0].messages[0].content).toBe('修改后的问题')
   })
+
+  it('setMessageFeedback 切换助手消息反馈并持久化', async () => {
+    await boot()
+    useChatStore.getState().createConversation('deepseek', 'deepseek-chat')
+    await useChatStore.getState().sendMessage('你好')
+    const req = startRequests[0]
+    chunkCb!({ runId: req.runId, conversationId: req.conversationId, type: 'done' })
+    const assistant = useChatStore.getState().conversations[0].messages[1]
+
+    useChatStore.getState().setMessageFeedback(assistant.id, 'positive')
+    expect(useChatStore.getState().conversations[0].messages[1].feedback).toBe('positive')
+    expect(saved.get(req.conversationId)?.messages[1].feedback).toBe('positive')
+
+    useChatStore.getState().setMessageFeedback(assistant.id, 'positive')
+    expect(useChatStore.getState().conversations[0].messages[1].feedback).toBeUndefined()
+  })
 })

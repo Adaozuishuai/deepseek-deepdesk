@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bot, User, Pencil, RefreshCw, Check, Copy } from 'lucide-react'
+import { Pencil, RefreshCw, Check, Copy, ThumbsDown, ThumbsUp } from 'lucide-react'
 import type { ChatMessage } from '@shared/types'
 import Markdown from './Markdown'
 import ThinkingBlock from './ThinkingBlock'
@@ -13,6 +13,7 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
   const streaming = !!message.streaming
   const editAndResend = useChatStore(s => s.editAndResend)
   const regenerate = useChatStore(s => s.regenerate)
+  const setMessageFeedback = useChatStore(s => s.setMessageFeedback)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.content)
   const [copied, setCopied] = useState(false)
@@ -35,9 +36,6 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
 
   return (
     <div className={clsx('msg-row', isUser ? 'user' : 'assistant')}>
-      <div className={clsx('msg-avatar', isUser ? 'user' : 'bot')}>
-        {isUser ? <User size={14} /> : <Bot size={14} />}
-      </div>
       <div className='msg-body'>
         <div className='msg-meta'>
           <span className='msg-role'>{isUser ? '你' : 'DeepDesk'}</span>
@@ -61,13 +59,16 @@ export default function MessageItem({ message }: { message: ChatMessage }) {
         <div className='msg-actions'>
           {!streaming && isUser && (
             <>
-              <button className='icon-btn' title='编辑并重新发送' onClick={() => { setDraft(message.content); setEditing(true) }}><Pencil size={13} /></button>
+              <button className='message-action' aria-label='复制消息' title='复制消息' onClick={() => void onCopy()}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+              <button className='message-action' aria-label='编辑消息' title='编辑消息' onClick={() => { setDraft(message.content); setEditing(true) }}><Pencil size={15} /></button>
             </>
           )}
           {!streaming && !isUser && (
             <>
-              <button className='icon-btn' title='重新生成' onClick={() => void regenerate()}><RefreshCw size={13} /></button>
-              <button className='icon-btn' title='复制' onClick={() => void onCopy()}>{copied ? <Check size={13} /> : <Copy size={13} />}</button>
+              <button className='message-action' aria-label='复制消息' title='复制消息' onClick={() => void onCopy()}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+              <button className='message-action' aria-label='重新生成' title='重新生成' onClick={() => void regenerate()}><RefreshCw size={15} /></button>
+              <button className={clsx('message-action', message.feedback === 'positive' && 'active')} aria-label='喜欢' aria-pressed={message.feedback === 'positive'} title='喜欢' onClick={() => setMessageFeedback(message.id, 'positive')}><ThumbsUp size={15} /></button>
+              <button className={clsx('message-action', message.feedback === 'negative' && 'active')} aria-label='不喜欢' aria-pressed={message.feedback === 'negative'} title='不喜欢' onClick={() => setMessageFeedback(message.id, 'negative')}><ThumbsDown size={15} /></button>
             </>
           )}
         </div>

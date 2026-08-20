@@ -20,6 +20,8 @@
   --sidebar-surface: #15171c;
   --bg-hover: rgba(255, 255, 255, 0.055);
   --bg-active: rgba(255, 255, 255, 0.085);
+  --menu-surface: #25272d;
+  --menu-option-active: #303239;
   --border: rgba(255, 255, 255, 0.075);
   --border-strong: rgba(255, 255, 255, 0.14);
   --text: #f1f3f5;
@@ -52,6 +54,8 @@
   --sidebar-surface: #f7f8fa;
   --bg-hover: rgba(20, 26, 36, 0.045);
   --bg-active: rgba(20, 26, 36, 0.075);
+  --menu-surface: #f0f1f3;
+  --menu-option-active: #e5e7ea;
   --border: rgba(20, 26, 36, 0.09);
   --border-strong: rgba(20, 26, 36, 0.16);
   --text: #30343b;
@@ -262,10 +266,11 @@ input, textarea { user-select: text; }
 .markdown .task-list-item { list-style: none; }
 
 .codeblock { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 10px 0; background: #1a1a1a; }
-.codeblock-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid var(--border); }
+.codeblock-header { display: flex; align-items: center; padding: 6px 12px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid var(--border); }
 .codeblock-lang { font-size: var(--fs-2xs); color: var(--text-muted); font-family: var(--font-mono); text-transform: lowercase; }
-.codeblock-copy { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-muted); cursor: pointer; background: none; border: none; padding: 3px 8px; border-radius: 5px; transition: color 0.12s ease, background 0.12s ease; }
-.codeblock-copy:hover { color: var(--text); background: var(--bg-hover); }
+.codeblock-action { display: flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-muted); cursor: pointer; background: none; border: none; padding: 3px 8px; border-radius: 5px; transition: color 0.12s ease, background 0.12s ease; }
+.codeblock-action:first-of-type { margin-left: auto; }
+.codeblock-action:hover { color: var(--text); background: var(--bg-hover); }
 .codeblock pre { margin: 0; padding: 12px 14px; overflow-x: auto; font-size: var(--fs-sm); line-height: 1.6; }
 .codeblock pre code { font-family: var(--font-mono); background: transparent; padding: 0; font-size: inherit; }
 .hljs { background: transparent !important; padding: 0 !important; }
@@ -497,6 +502,24 @@ input, textarea { user-select: text; }
 .msg-row.user .msg-body { align-items: flex-end; }
 .msg-row.user .msg-meta, .msg-row.user .msg-actions { justify-content: flex-end; }
 
-.agent-footer { position: relative; }
+.agent-footer { position: relative; z-index: 40; }
 .scroll-to-bottom { position: absolute; z-index: 20; bottom: calc(100% + 12px); left: 50%; display: grid; width: 36px; height: 36px; padding: 0; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--bg-elevated); color: var(--text-secondary); box-shadow: var(--shadow-float); cursor: pointer; transform: translateX(-50%); transition: background 120ms ease, color 120ms ease, border-color 120ms ease; }
 .scroll-to-bottom:hover { border-color: var(--border-strong); background: var(--bg-hover); color: var(--text); }
+
+/* ===== 会话消息：内容优先，操作在需要时出现 ===== */
+.msg-row { display: block; }
+.msg-avatar, .msg-meta { display: none; }
+.msg-row.user { display: flex; justify-content: flex-end; }
+.msg-row.user .msg-body { flex: 0 1 auto; align-items: flex-end; max-width: 82%; }
+.msg-row.assistant .msg-body { align-items: flex-start; }
+.msg-content.user { padding: 10px 14px; border-radius: 18px; background: var(--accent-soft); color: var(--text); }
+.msg-actions { min-height: 28px; gap: 2px; margin-top: 3px; opacity: 0.52; }
+.msg-row:hover .msg-actions, .msg-row:focus-within .msg-actions { opacity: 1; }
+.message-action { display: inline-grid; width: 28px; height: 28px; padding: 0; place-items: center; border: none; border-radius: 7px; background: transparent; color: var(--text-muted); cursor: pointer; transition: background 120ms ease, color 120ms ease; }
+.message-action:hover { background: var(--bg-hover); color: var(--text); }
+.message-action.active { color: var(--accent-text); background: var(--accent-soft); }
+.message-action:focus-visible, .codeblock-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 输入与工具栏沿用灰阶焦点，避免原生蓝色粗描边破坏整体层级。 */
+.sidebar .input:focus, .sidebar .input:focus-visible { border-color: var(--border-strong); box-shadow: none; outline: none; }
+.toolbar-item:focus-visible, .composer-menu-option:focus-visible { outline: none; }

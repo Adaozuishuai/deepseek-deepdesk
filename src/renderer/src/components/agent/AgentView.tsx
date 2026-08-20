@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { ArrowDown, Check, ChevronDown, FolderOpen, Square, Terminal, Trash2, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
+import { ArrowDown, Check, ChevronDown, Copy, FolderOpen, Pencil, RefreshCw, Square, Terminal, ThumbsDown, ThumbsUp, X, ShieldQuestion, ShieldCheck, Unlock } from 'lucide-react'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { useSettingsStore } from '../../stores/useSettingsStore'
 import type { AgentStep } from '@shared/agent-types'
 import clsx from 'clsx'
 import { formatTokens } from '../../lib/format'
 import Markdown from '../chat/Markdown'
+import { copyText } from '../../lib/utils'
 import '../../assets/agent.css'
 
 function estimateTokens(history: Array<Record<string, unknown>>): number {
@@ -89,11 +90,103 @@ function ToolCard({ step }: { step: AgentStep }) {
   )
 }
 
-function StepItem({ step }: { step: AgentStep }) {
+function MessageActions({
+  text,
+  isUser,
+  feedback,
+  onEdit,
+  onRegenerate,
+  onFeedback,
+  isLastMessage
+}: {
+  text: string
+  isUser: boolean
+  feedback?: AgentStep['feedback']
+  onEdit?: () => void
+  onRegenerate?: () => void
+  onFeedback?: (feedback: 'positive' | 'negative') => void
+  isLastMessage: boolean
+}) {
+  const [copied, setCopied] = useState(false)
+  const onCopy = async (): Promise<void> => {
+    const ok = await copyText(text)
+    if (!ok) return
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div className={clsx('agent-message-actions', isLastMessage && 'last-message-actions')}>
+      <button className='message-action' aria-label='复制消息' title='复制消息' onClick={() => void onCopy()}>
+        {copied ? <Check size={15} /> : <Copy size={15} />}
+      </button>
+      {isUser ? (
+        <button className='message-action' aria-label='编辑消息' title='编辑消息' onClick={onEdit}><Pencil size={15} /></button>
+      ) : (
+        <>
+          <button className='message-action' aria-label='重新生成' title='重新生成' onClick={onRegenerate}><RefreshCw size={15} /></button>
+          <button className={clsx('message-action', feedback === 'positive' && 'active')} aria-label='喜欢' aria-pressed={feedback === 'positive'} title='喜欢' onClick={() => onFeedback?.('positive')}><ThumbsUp size={15} /></button>
+          <button className={clsx('message-action', feedback === 'negative' && 'active')} aria-label='不喜欢' aria-pressed={feedback === 'negative'} title='不喜欢' onClick={() => onFeedback?.('negative')}><ThumbsDown size={15} /></button>
+        </>
+      )}
+    </div>
+  )
+}
+
+function TaskStep({ step, index, isLastMessage }: { step: AgentStep; index: number; isLastMessage: boolean }) {
+  const updateStep = useAgentStore(s => s.updateStep)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(step.text ?? '')
+  const save = (): void => {
+    const text = draft.trim()
+    if (!text) return
+    updateStep(index, { text })
+    setEditing(false)
+  }
+  return (
+    <div className={clsx('agent-message', 'user', isLastMessage && 'is-last-message')}>
+      {editing ? (
+        <textarea
+          className='agent-message-editor'
+          value={draft}
+          autoFocus
+          onChange={event => setDraft(event.target.value)}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault()
+              save()
+            }
+            if (event.key === 'Escape') setEditing(false)
+          }}
+        />
+      ) : <div className='agent-task'>{step.text}</div>}
+      <MessageActions text={step.text ?? ''} isUser isLastMessage={isLastMessage} onEdit={() => { setDraft(step.text ?? ''); setEditing(true) }} />
+    </div>
+  )
+}
+
+function TextStep({ step, index, isLastMessage }: { step: AgentStep; index: number; isLastMessage: boolean }) {
+  const regenerateFrom = useAgentStore(s => s.regenerateFrom)
+  const setStepFeedback = useAgentStore(s => s.setStepFeedback)
+  return (
+    <div className={clsx('agent-message', 'assistant', isLastMessage && 'is-last-message')}>
+      <Markdown text={step.text ?? ''} />
+      <MessageActions
+        text={step.text ?? ''}
+        isUser={false}
+        feedback={step.feedback}
+        isLastMessage={isLastMessage}
+        onRegenerate={() => void regenerateFrom(index)}
+        onFeedback={feedback => setStepFeedback(index, feedback)}
+      />
+    </div>
+  )
+}
+
+function StepItem({ step, index, isLastMessage }: { step: AgentStep; index: number; isLastMessage: boolean }) {
   switch (step.kind) {
-    case 'task': return <div className='agent-task'><span>{step.text}</span></div>
+    case 'task': return <TaskStep step={step} index={index} isLastMessage={isLastMessage} />
     case 'thinking': return <div className='agent-thinking'><span className='thinking-icon' />思考中…</div>
-    case 'text': return <Markdown text={step.text ?? ''} />
+    case 'text': return <TextStep step={step} index={index} isLastMessage={isLastMessage} />
     case 'tool': return <ToolCard step={step} />
     case 'error': return <div className='agent-error'>{step.message}</div>
     default: return null
@@ -111,25 +204,31 @@ export default function AgentView() {
   const stop = useAgentStore(s => s.stop)
   const approve = useAgentStore(s => s.approve)
   const pickDirectory = useAgentStore(s => s.pickDirectory)
-  const clear = useAgentStore(s => s.clear)
   const settings = useSettingsStore(s => s.settings)
   const providers = useSettingsStore(s => s.providers)
   const updateSettings = useSettingsStore(s => s.updateSettings)
   const [text, setText] = useState('')
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
+  const [openMenu, setOpenMenu] = useState<'model' | 'permission' | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const provider = providers.find(p => p.id === (settings?.defaultProviderId ?? 'deepseek'))
   const contextWindow = provider?.models.find(m => m.id === (settings?.defaultModelId ?? ''))?.contextWindow ?? 128000
   const mode = settings?.agentPermissionMode ?? 'ask'
   const modeLabel = mode === 'full' ? '完全访问' : mode === 'auto' ? '替我审批' : '每次询问'
-  const cycleMode = (): void => {
-    const order = ['ask', 'auto', 'full'] as const
-    const idx = order.indexOf(mode as 'ask' | 'auto' | 'full')
-    const next = order[(idx + 1) % order.length]
-    void updateSettings({ agentPermissionMode: next })
-  }
+  const models = provider?.models ?? []
+  const modelLabel = models.find(item => item.id === settings?.defaultModelId)?.name ?? settings?.defaultModelId ?? '选择模型'
+  const lastMessageIndex = steps.reduce((last, step, index) => step.kind === 'task' || step.kind === 'text' ? index : last, -1)
+
+  useEffect(() => {
+    const closeMenu = (event: PointerEvent): void => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpenMenu(null)
+    }
+    document.addEventListener('pointerdown', closeMenu)
+    return () => document.removeEventListener('pointerdown', closeMenu)
+  }, [])
 
   useEffect(() => {
     const ta = taRef.current
@@ -201,7 +300,7 @@ export default function AgentView() {
       ) : (
         <div className='agent-scroll' ref={scrollRef}>
           <div className='agent-inner'>
-            {steps.map((st, i) => <StepItem key={i} step={st} />)}
+            {steps.map((st, i) => <StepItem key={i} step={st} index={i} isLastMessage={i === lastMessageIndex} />)}
           </div>
         </div>
       )}
@@ -211,7 +310,7 @@ export default function AgentView() {
             <ArrowDown size={17} />
           </button>
         )}
-        <div className='agent-composer'>
+        <div className='agent-composer' ref={menuRef}>
           <textarea
             ref={taRef}
             className='composer-textarea'
@@ -223,21 +322,40 @@ export default function AgentView() {
           />
           <div className='composer-actions'>
             <div className='composer-left'>
-              <button className='toolbar-item' onClick={cycleMode} title='权限模式（点击切换）'>
-                {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
-                <span>{modeLabel}</span>
-              </button>
+              <div className='composer-menu'>
+                <button className='toolbar-item composer-menu-trigger' aria-expanded={openMenu === 'permission'} onClick={() => setOpenMenu(openMenu === 'permission' ? null : 'permission')} title='选择权限模式'>
+                  {mode === 'full' ? <Unlock size={13} /> : mode === 'auto' ? <ShieldCheck size={13} /> : <ShieldQuestion size={13} />}
+                  <span>{modeLabel}</span><ChevronDown size={12} />
+                </button>
+                {openMenu === 'permission' && (
+                  <div className='composer-menu-popover' role='menu' aria-label='选择权限模式'>
+                    {([['ask', '每次询问'], ['auto', '替我审批'], ['full', '完全访问']] as const).map(([value, label]) => (
+                      <button key={value} className='composer-menu-option' role='menuitemradio' aria-checked={mode === value} onClick={() => { void updateSettings({ agentPermissionMode: value }); setOpenMenu(null) }}>
+                        <span>{label}</span>{mode === value && <Check size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
                 <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
               </button>
-              {steps.length > 0 && !running && (
-                <button className='icon-btn' title='清空' onClick={clear}><Trash2 size={14} /></button>
-              )}
             </div>
             <div className='composer-right'>
-              <select className='composer-select' value={settings?.defaultModelId ?? ''} onChange={e => void updateSettings({ defaultModelId: e.target.value })} title='选择模型'>
-                {(provider?.models ?? []).map(m => <option key={m.id} value={m.id}>{m.name ?? m.id}</option>)}
-              </select>
+              <div className='composer-menu'>
+                <button className='toolbar-item composer-menu-trigger composer-model-trigger' aria-expanded={openMenu === 'model'} onClick={() => setOpenMenu(openMenu === 'model' ? null : 'model')} title='选择模型'>
+                  <span>{modelLabel}</span><ChevronDown size={12} />
+                </button>
+                {openMenu === 'model' && (
+                  <div className='composer-menu-popover composer-model-popover' role='menu' aria-label='选择模型'>
+                    {models.map(item => (
+                      <button key={item.id} className='composer-menu-option' role='menuitemradio' aria-checked={settings?.defaultModelId === item.id} onClick={() => { void updateSettings({ defaultModelId: item.id }); setOpenMenu(null) }}>
+                        <span>{item.name ?? item.id}</span>{settings?.defaultModelId === item.id && <Check size={14} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <ContextMeter history={history} contextWindow={contextWindow} />
               {running ? (
                 <button className='stop-btn' onClick={stop} title='停止'><Square size={13} /></button>

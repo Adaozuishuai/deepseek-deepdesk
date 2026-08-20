@@ -5,6 +5,7 @@ import {
   closeDeepDesk,
   closeDeepDeskWithoutRemovingData,
   createLongAgentSessionUserData,
+  createMessageActionsUserData,
   expectAppShell,
   expectComposerReady,
   goBackToChat,
@@ -88,19 +89,34 @@ test('supports global settings shortcuts and sidebar model entry', async () => {
   await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
 })
 
-test('cycles agent permission mode from the composer toolbar', async () => {
-  const permissionButton = page.getByTitle('权限模式（点击切换）')
+test('selects agent permission mode from the gray composer menu', async () => {
+  const permissionButton = page.getByTitle('选择权限模式')
 
   await expect(permissionButton).toContainText('每次询问')
 
   await permissionButton.click()
+  const menu = page.getByRole('menu', { name: '选择权限模式' })
+  await expect(menu).toBeVisible()
+  await menu.getByRole('menuitemradio', { name: '替我审批' }).click()
   await expect(permissionButton).toContainText('替我审批')
 
   await permissionButton.click()
+  await menu.getByRole('menuitemradio', { name: '完全访问' }).click()
   await expect(permissionButton).toContainText('完全访问')
 
   await permissionButton.click()
+  await menu.getByRole('menuitemradio', { name: '每次询问' }).click()
   await expect(permissionButton).toContainText('每次询问')
+})
+
+test('selects a model from the custom gray composer menu', async () => {
+  const modelButton = page.getByTitle('选择模型')
+
+  await modelButton.click()
+  const menu = page.getByRole('menu', { name: '选择模型' })
+  await expect(menu).toBeVisible()
+  await menu.getByRole('menuitemradio', { name: 'DeepSeek V4 Pro（深度思考）' }).click()
+  await expect(modelButton).toContainText('DeepSeek V4 Pro（深度思考）')
 })
 
 test('selects a mock agent work directory without opening a native dialog', async () => {
@@ -124,7 +140,7 @@ test('updates general settings without calling external services', async () => {
   await page.getByRole('button', { name: '替我审批' }).click()
   await page.getByTitle('返回').click()
 
-  await expect(page.getByTitle('权限模式（点击切换）')).toContainText('替我审批')
+  await expect(page.getByTitle('选择权限模式')).toContainText('替我审批')
 })
 
 test('opens provider modal, validates required fields, and closes it', async () => {
@@ -232,7 +248,7 @@ test('persists general settings after app restart with the same user data direct
   page = ctx.page
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
-  await expect(page.getByTitle('权限模式（点击切换）')).toContainText('完全访问')
+  await expect(page.getByTitle('选择权限模式')).toContainText('完全访问')
 })
 
 test('places the scroll-to-bottom control above the composer in a long agent session', async () => {
@@ -261,4 +277,44 @@ test('places the scroll-to-bottom control above the composer in a long agent ses
 
   await scrollButton.click()
   await expect.poll(async () => scroll.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThanOrEqual(2)
+})
+
+test('provides polished message actions and code block download in a local conversation', async () => {
+  await closeDeepDesk(ctx)
+  ctx = await launchDeepDesk(createMessageActionsUserData())
+  app = ctx.app
+  page = ctx.page
+
+  await page.locator('.conv-item', { hasText: '消息操作视觉回归' }).click()
+
+  const userMessage = page.locator('.agent-message.user', { hasText: '你看看这个是什么类型' })
+  const assistantMessage = page.locator('.agent-message.assistant', { hasText: '这是 TypeScript 示例' })
+  await expect(userMessage).toBeVisible()
+  await expect(assistantMessage).toBeVisible()
+
+  await expect(userMessage.getByRole('button', { name: '复制消息' })).toBeVisible()
+  await userMessage.getByRole('button', { name: '编辑消息' }).click()
+  await expect(userMessage.locator('textarea')).toHaveValue('你看看这个是什么类型')
+
+  await expect(assistantMessage.getByRole('button', { name: '复制消息' })).toBeVisible()
+  await expect(assistantMessage.getByRole('button', { name: '重新生成' })).toBeVisible()
+  await assistantMessage.getByRole('button', { name: '喜欢', exact: true }).click()
+  await expect(assistantMessage.getByRole('button', { name: '喜欢', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await assistantMessage.getByRole('button', { name: '不喜欢', exact: true }).click()
+  await expect(assistantMessage.getByRole('button', { name: '喜欢', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await expect(assistantMessage.getByRole('button', { name: '不喜欢', exact: true })).toHaveAttribute('aria-pressed', 'true')
+
+  const codeBlock = assistantMessage.locator('.codeblock')
+  await expect(codeBlock.getByRole('button', { name: '复制代码' })).toBeVisible()
+  await page.evaluate(() => {
+    const testWindow = window as Window & { __deepdeskDownload?: { filename: string; href: string } }
+    HTMLAnchorElement.prototype.click = function (): void {
+      testWindow.__deepdeskDownload = { filename: this.download, href: this.href }
+    }
+  })
+  await codeBlock.getByRole('button', { name: '下载代码' }).click()
+  await expect.poll(() => page.evaluate(() => {
+    const testWindow = window as Window & { __deepdeskDownload?: { filename: string; href: string } }
+    return testWindow.__deepdeskDownload
+  })).toEqual({ filename: 'deepdesk-code.ts', href: expect.stringMatching(/^blob:/) })
 })
