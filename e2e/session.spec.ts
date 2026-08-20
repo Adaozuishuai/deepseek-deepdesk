@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { basename } from 'node:path'
 import { closeDeepDesk, expectAppShell, expectComposerReady, goBackToChat, isMainWindowMaximized, launchDeepDesk, openSettings } from './helpers'
 
 test('runs local acceptance flow in one Electron window', async () => {
@@ -32,18 +33,19 @@ test('runs local acceptance flow in one Electron window', async () => {
       await expect(page.locator('.sidebar:not(.collapsed)')).toBeVisible()
     })
 
-    await test.step('verify shortcuts and sidebar model entry', async () => {
+    await test.step('verify shortcuts and sidebar account footer', async () => {
       await page.locator('.app-shell').click()
       await page.keyboard.down('Control')
       await page.keyboard.press(',')
       await page.keyboard.up('Control')
-      await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+      await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
       await page.keyboard.press('Escape')
       await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
 
-      await page.locator('.model-chip').click()
-      await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+      await expect(page.locator('.account-chip')).toContainText('个人账户')
+      await page.getByTitle('设置 (Ctrl+,)').click()
+      await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
       await page.keyboard.down('Control')
       await page.keyboard.press(',')
@@ -66,10 +68,12 @@ test('runs local acceptance flow in one Electron window', async () => {
     })
 
     await test.step('select a mock agent work directory without a native dialog', async () => {
-      const directoryPicker = page.getByTitle('选择工作目录')
+      const directoryPicker = page.locator('.agent-composer .toolbar-item[title="选择工作目录"]')
 
       await directoryPicker.click()
-      await expect(directoryPicker).toContainText(ctx.userDataDir)
+      const selectedDirectoryPicker = page.locator('.agent-composer .toolbar-item').filter({ hasText: basename(ctx.userDataDir) })
+      await expect(selectedDirectoryPicker).toContainText(basename(ctx.userDataDir))
+      await expect(selectedDirectoryPicker).toHaveAttribute('title', `工作目录：${ctx.userDataDir}`)
     })
 
     await test.step('validate composer and context meter', async () => {

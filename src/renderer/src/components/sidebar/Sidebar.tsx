@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react'
-import { Plus, Settings, Search, Trash2, Pencil, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Plus, Settings, Search, Trash2, Pencil, PanelLeftClose, PanelLeftOpen, UserRound } from 'lucide-react'
 import DeepSeekLogo from '../DeepSeekLogo'
 import { useAgentStore } from '../../stores/useAgentStore'
-import { useSettingsStore } from '../../stores/useSettingsStore'
 import { formatTime } from '../../lib/format'
 import clsx from 'clsx'
 
-export default function Sidebar({ view, onOpenSettings, collapsed, onToggleCollapsed }: { view: string; onOpenSettings: () => void; collapsed: boolean; onToggleCollapsed: () => void }) {
+type SettingsTab = 'general' | 'providers'
+
+export default function Sidebar({ view, onOpenSettings, collapsed, onToggleCollapsed }: { view: string; onOpenSettings: (tab?: SettingsTab) => void; collapsed: boolean; onToggleCollapsed: () => void }) {
   const sessions = useAgentStore(s => s.sessions)
   const activeSessionId = useAgentStore(s => s.activeSessionId)
   const loadSession = useAgentStore(s => s.loadSession)
   const deleteSession = useAgentStore(s => s.deleteSession)
   const clear = useAgentStore(s => s.clear)
   const renameSession = useAgentStore(s => s.renameSession)
-  const providers = useSettingsStore(s => s.providers)
-  const settings = useSettingsStore(s => s.settings)
   const [query, setQuery] = useState('')
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -25,9 +24,6 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
     if (!q) return sessions
     return sessions.filter(s => s.task.toLowerCase().includes(q))
   }, [sessions, query])
-
-  const currentProvider = providers.find(p => p.id === (settings?.defaultProviderId ?? ''))
-  const configured = currentProvider ? currentProvider.apiKey.length > 0 : false
 
   const commitRename = (id: string): void => {
     const t = renameText.trim()
@@ -41,7 +37,7 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
         <div className='sidebar-rail'>
           <button className='icon-btn' onClick={onToggleCollapsed} title='展开侧边栏'><PanelLeftOpen size={16} /></button>
           <button className='icon-btn' onClick={() => clear()} title='新对话'><Plus size={16} /></button>
-          <button className='icon-btn' onClick={onOpenSettings} title='设置'><Settings size={15} /></button>
+          <button className='icon-btn' onClick={() => onOpenSettings('general')} title='设置'><Settings size={15} /></button>
         </div>
       ) : (
         <>
@@ -88,12 +84,13 @@ export default function Sidebar({ view, onOpenSettings, collapsed, onToggleColla
             ))}
           </div>
           <div className='sidebar-footer'>
-            <div className='model-chip' onClick={onOpenSettings} title='当前默认模型服务，点击进入设置'>
-              <span className={clsx('dot', !configured && 'off')} />
-              <span className='name'>{currentProvider ? currentProvider.name : '未配置'}</span>
-              {configured && settings && <span className='muted mono fs-2xs'>{settings.defaultModelId}</span>}
+            <div className='account-chip' title='个人账户'>
+              <span className='account-avatar'><UserRound size={15} /></span>
+              <span className='account-meta'>
+                <span className='account-name'>个人账户</span>
+              </span>
             </div>
-            <button className='icon-btn' title='设置 (Ctrl+,)' onClick={onOpenSettings}><Settings size={15} /></button>
+            <button className='icon-btn' title='设置 (Ctrl+,)' onClick={() => onOpenSettings('general')}><Settings size={15} /></button>
           </div>
         </>
       )}

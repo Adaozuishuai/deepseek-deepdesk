@@ -32,6 +32,13 @@ function estimateTokens(history: Array<Record<string, unknown>>): number {
   return Math.max(1, Math.round(tokens))
 }
 
+function formatWorkdirName(workdir: string): string {
+  const normalized = workdir.trim().replace(/[\\/]+$/, '')
+  if (!normalized) return ''
+  const parts = normalized.split(/[\\/]+/).filter(Boolean)
+  return parts.at(-1) ?? normalized
+}
+
 function ContextMeter({ history, contextWindow }: { history: Array<Record<string, unknown>>; contextWindow: number }) {
   const [open, setOpen] = useState(false)
   const used = estimateTokens(history)
@@ -219,6 +226,8 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
   const selectedModel = models.find(item => item.id === settings?.defaultModelId)
   const selectedModelLabel = selectedModel?.name ?? settings?.defaultModelId ?? '选择模型'
   const modelButtonLabel = autoModelMode ? 'Auto' : selectedModelLabel
+  const workdirLabel = formatWorkdirName(workdir)
+  const workdirTitle = workdir ? `工作目录：${workdir}` : '选择工作目录'
   const isDeepSeekModel = (model: { id: string; name?: string }): boolean => {
     const text = (model.id + ' ' + (model.name ?? '')).toLowerCase()
     return text.includes('deepseek')
@@ -280,8 +289,8 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
               </div>
             )}
           </div>
-          <button className='toolbar-item' onClick={() => void pickDirectory()} title='选择工作目录'>
-            <FolderOpen size={13} /><span>{workdir || '选择工作目录'}</span>
+          <button className='toolbar-item' onClick={() => void pickDirectory()} title={workdirTitle}>
+            <FolderOpen size={13} /><span>{workdirLabel || '选择工作目录'}</span>
           </button>
         </div>
         <div className='composer-right'>
@@ -309,7 +318,7 @@ function AgentComposer({ onOpenSettings }: { onOpenSettings: () => void }) {
                       {isDeepSeekModel(item) ? <DeepSeekLogo className='model-logo' width={18} height={18} aria-hidden /> : <span className='model-mark'>{(item.name ?? item.id).trim().charAt(0).toUpperCase()}</span>}
                       <span className='model-name'>{item.name ?? item.id}</span>
                     </span>
-                    <span className='model-price'>{item.id === settings?.defaultModelId && !autoModelMode ? <Check size={15} /> : '0.79x'}</span>
+                    {!autoModelMode && item.id === settings?.defaultModelId && <span className='model-check'><Check size={15} /></span>}
                   </button>
                 ))}
                 </div>
@@ -371,6 +380,8 @@ export default function AgentView({ onOpenSettings }: { onOpenSettings: () => vo
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
     setShowScrollToBottom(false)
   }
+  const workdirLabel = formatWorkdirName(workdir)
+  const workdirTitle = workdir ? `工作目录：${workdir}` : '选择工作目录'
 
   return (
     <div className='agent-view'>
@@ -391,7 +402,7 @@ export default function AgentView({ onOpenSettings }: { onOpenSettings: () => vo
           <div className='empty-title'>你好，我是 DeepDesk</div>
           <div className='empty-sub'>直接问我问题，或让我帮你写代码、执行命令、读写文件、发飞书消息。先选个工作目录，然后告诉我做什么。</div>
           <div className='quick-chips'>
-            <button className='quick-chip' onClick={() => void pickDirectory()}><FolderOpen size={13} /> {workdir || '选择工作目录'}</button>
+            <button className='quick-chip' onClick={() => void pickDirectory()} title={workdirTitle}><FolderOpen size={13} /> {workdirLabel || '选择工作目录'}</button>
           </div>
           <div className='agent-empty-composer'>
             <AgentComposer onOpenSettings={onOpenSettings} />

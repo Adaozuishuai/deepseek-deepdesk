@@ -110,7 +110,7 @@ export async function expectAppShell(page: Page): Promise<void> {
 
 export async function openSettings(page: Page): Promise<void> {
   await page.getByTitle('设置 (Ctrl+,)').click()
-  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+  await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 }
 
 export async function goBackToChat(page: Page): Promise<void> {
