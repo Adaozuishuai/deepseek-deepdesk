@@ -26,6 +26,25 @@ export default function GeneralTab() {
 
   return (
     <div className='settings-section'>
+      <div className='settings-section-title'>权限</div>
+      <div className='settings-card'>
+        <div className='settings-row'>
+          <div>
+            <div className='settings-row-label'>Agent 权限模式</div>
+            <div className='settings-row-desc'>决定 Agent 执行命令、访问工作目录外文件时的批准策略</div>
+          </div>
+          <div className='tabs'>
+            {([
+              { key: 'ask', label: '每次询问' },
+              { key: 'auto', label: '替我审批' },
+              { key: 'full', label: '完全访问' }
+            ] as Array<{ key: AgentPermissionMode; label: string }>).map(o => (
+              <button key={o.key} className={clsx('tab', settings.agentPermissionMode === o.key && 'active')} onClick={() => void updateSettings({ agentPermissionMode: o.key })}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className='settings-section-title'>常规</div>
       <div className='settings-card'>
         <div className='settings-row'>
@@ -66,24 +85,9 @@ export default function GeneralTab() {
           </div>
           <Switch checked={settings.enterToSend} onChange={v => void updateSettings({ enterToSend: v })} />
         </div>
-        <div className='settings-row'>
-          <div>
-            <div className='settings-row-label'>Agent 权限模式</div>
-            <div className='settings-row-desc'>决定 Agent 执行命令、访问工作目录外文件时的批准策略</div>
-          </div>
-          <div className='tabs'>
-            {([
-              { key: 'ask', label: '每次询问' },
-              { key: 'auto', label: '替我审批' },
-              { key: 'full', label: '完全访问' }
-            ] as Array<{ key: AgentPermissionMode; label: string }>).map(o => (
-              <button key={o.key} className={clsx('tab', settings.agentPermissionMode === o.key && 'active')} onClick={() => void updateSettings({ agentPermissionMode: o.key })}>{o.label}</button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      <div className='settings-section-title' style={{ marginTop: 10 }}>数据</div>
+      <div className='settings-section-title'>数据</div>
       <div className='settings-card danger-zone'>
         <div className='settings-row'>
           <div>

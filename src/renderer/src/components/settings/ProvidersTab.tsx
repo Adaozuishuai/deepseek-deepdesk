@@ -9,7 +9,7 @@ export default function ProvidersTab() {
   const [showForm, setShowForm] = useState(false)
   return (
     <div className='settings-section'>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className='settings-section-head'>
         <div className='settings-section-title'>模型服务</div>
         <button className='btn btn-ghost btn-sm' onClick={() => setShowForm(true)}><Plus size={13} /> 添加服务</button>
       </div>

@@ -9,10 +9,12 @@ import { useAgentStore } from './stores/useAgentStore'
 import { Loader2 } from 'lucide-react'
 
 type View = 'chat' | 'settings'
+type SettingsTab = 'general' | 'providers'
 
 export default function App() {
   const ready = useSettingsStore(s => s.loaded)
   const [view, setView] = useState<View>('chat')
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
@@ -42,7 +44,11 @@ export default function App() {
         useAgentStore.getState().clear()
       } else if (mod && e.key === ',') {
         e.preventDefault()
-        setView(v => (v === 'settings' ? 'chat' : 'settings'))
+        setView(v => {
+          if (v === 'settings') return 'chat'
+          setSettingsTab('general')
+          return 'settings'
+        })
       } else if (e.key === 'Escape') {
         const agent = useAgentStore.getState()
         if (agent.running) agent.stop()
@@ -65,13 +71,18 @@ export default function App() {
     )
   }
 
+  const openSettings = (tab: SettingsTab = 'general'): void => {
+    setSettingsTab(tab)
+    setView('settings')
+  }
+
   return (
     <div className='app-shell'>
       <TitleBar view={view} />
       <div className='app-body'>
-        <Sidebar view={view} onOpenSettings={() => setView('settings')} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(c => !c)} />
-        <main className='app-main'>
-          {view === 'chat' ? <AgentView onOpenSettings={() => setView('settings')} /> : <SettingsView onBack={() => setView('chat')} />}
+        {view === 'chat' && <Sidebar view={view} onOpenSettings={openSettings} collapsed={collapsed} onToggleCollapsed={() => setCollapsed(c => !c)} />}
+        <main className={view === 'settings' ? 'app-main settings-main' : 'app-main'}>
+          {view === 'chat' ? <AgentView onOpenSettings={() => openSettings('providers')} /> : <SettingsView onBack={() => setView('chat')} tab={settingsTab} onTabChange={setSettingsTab} />}
         </main>
       </div>
     </div>

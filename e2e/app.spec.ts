@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
+import { basename } from 'node:path'
 import type { DeepDeskE2EApp } from './helpers'
 import {
   closeDeepDesk,
@@ -37,6 +38,32 @@ test('loads the app shell and opens settings', async () => {
 
   await expect(page.getByRole('button', { name: '模型服务' })).toBeVisible()
   await expect(page.getByRole('button', { name: '常规' })).toBeVisible()
+})
+
+test('aligns the settings navigation and content columns', async () => {
+  await openSettings(page)
+
+  const layout = await page.evaluate(() => {
+    const heading = document.querySelector('.settings-page-head')
+    const content = document.querySelector('.settings-inner')
+    const search = document.querySelector('.settings-search')
+    const activeItem = document.querySelector('.settings-nav-item.active')
+    if (!heading || !content || !search || !activeItem) return null
+
+    return {
+      headingLeft: Math.round(heading.getBoundingClientRect().left),
+      contentLeft: Math.round(content.getBoundingClientRect().left),
+      searchLeft: Math.round(search.getBoundingClientRect().left),
+      activeItemLeft: Math.round(activeItem.getBoundingClientRect().left),
+      searchRight: Math.round(search.getBoundingClientRect().right),
+      activeItemRight: Math.round(activeItem.getBoundingClientRect().right)
+    }
+  })
+
+  expect(layout).not.toBeNull()
+  expect(layout!.headingLeft).toBe(layout!.contentLeft)
+  expect(layout!.searchLeft).toBe(layout!.activeItemLeft)
+  expect(layout!.searchRight).toBe(layout!.activeItemRight)
 })
 
 test('marks titlebar drag regions and supports settings back button', async () => {
@@ -112,18 +139,19 @@ test('supports sidebar collapse, expand, and new conversation action', async () 
   await expect(page.locator('.brand', { hasText: 'DeepDesk' })).toBeVisible()
 })
 
-test('supports global settings shortcuts and sidebar model entry', async () => {
+test('supports global settings shortcuts and sidebar account footer', async () => {
   await page.locator('.app-shell').click()
   await page.keyboard.down('Control')
   await page.keyboard.press(',')
   await page.keyboard.up('Control')
-  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+  await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
   await page.keyboard.press('Escape')
   await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
 
-  await page.locator('.model-chip').click()
-  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+  await expect(page.locator('.account-chip')).toContainText('个人账户')
+  await page.getByTitle('设置 (Ctrl+,)').click()
+  await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
   await page.keyboard.down('Control')
   await page.keyboard.press(',')
@@ -159,6 +187,16 @@ test('selects a model from the polished composer model picker', async () => {
   await modelButton.click()
   const menu = page.getByRole('menu', { name: '选择模型' })
   await expect(menu).toBeVisible()
+  const menuStyle = await menu.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return {
+      width: Math.round(rect.width),
+      radius: getComputedStyle(element).borderTopLeftRadius
+    }
+  })
+  expect(menuStyle.width).toBeLessThanOrEqual(248)
+  expect(menuStyle.radius).toBe('8px')
+  await expect(menu).not.toContainText('0.79')
   await expect(menu.getByRole('switch', { name: 'Max 模式' })).toBeVisible()
   await expect(menu.getByRole('menuitemradio', { name: 'Auto' })).toHaveAttribute('aria-checked', 'true')
 
@@ -167,15 +205,17 @@ test('selects a model from the polished composer model picker', async () => {
 
   await modelButton.click()
   await page.getByRole('menuitem', { name: '配置自定义模型' }).click()
-  await expect(page.locator('.settings-title', { hasText: '设置' })).toBeVisible()
+  await expect(page.locator('.settings-title', { hasText: '模型服务' })).toBeVisible()
 })
 
 test('selects a mock agent work directory without opening a native dialog', async () => {
-  const directoryPicker = page.getByTitle('选择工作目录')
+  const directoryPicker = page.locator('.agent-composer .toolbar-item[title="选择工作目录"]')
 
   await directoryPicker.click()
 
-  await expect(directoryPicker).toContainText(ctx!.userDataDir)
+  const selectedDirectoryPicker = page.locator('.agent-composer .toolbar-item').filter({ hasText: basename(ctx!.userDataDir) })
+  await expect(selectedDirectoryPicker).toContainText(basename(ctx!.userDataDir))
+  await expect(selectedDirectoryPicker).toHaveAttribute('title', `工作目录：${ctx!.userDataDir}`)
 })
 
 test('updates general settings without calling external services', async () => {
@@ -196,6 +236,7 @@ test('updates general settings without calling external services', async () => {
 
 test('opens provider modal, validates required fields, and closes it', async () => {
   await page.getByTitle('设置 (Ctrl+,)').click()
+  await page.getByRole('button', { name: '模型服务' }).click()
   await page.getByRole('button', { name: '添加服务' }).click()
 
   const modal = page.locator('.modal')
@@ -234,7 +275,8 @@ test('validates composer send button and missing api key error', async () => {
 
   await sendButton.click()
 
-  await expect(page.getByText('请先在「设置 → 模型服务」中配置 API Key')).toBeVisible()
+  const error = page.getByText('请先在「设置 → 模型服务」中配置 API Key')
+  await expect(error).toBeVisible()
   await expect(textarea).toHaveValue('')
 })
 
@@ -254,6 +296,7 @@ test('supports multiline composer input and context meter panel', async () => {
 
 test('adds, edits, adds model, and deletes a custom provider without network calls', async () => {
   await openSettings(page)
+  await page.getByRole('button', { name: '模型服务' }).click()
   await page.getByRole('button', { name: '添加服务' }).click()
 
   const modal = page.locator('.modal')
@@ -368,4 +411,15 @@ test('provides polished message actions and code block download in a local conve
     const testWindow = window as Window & { __deepdeskDownload?: { filename: string; href: string } }
     return testWindow.__deepdeskDownload
   })).toEqual({ filename: 'deepdesk-code.ts', href: expect.stringMatching(/^blob:/) })
+
+  const messageLayout = await assistantMessage.evaluate(element => {
+    const actions = element.querySelector('.agent-message-actions')
+    if (!actions) return null
+    return {
+      messageBottom: Math.round(element.getBoundingClientRect().bottom),
+      actionsBottom: Math.round(actions.getBoundingClientRect().bottom)
+    }
+  })
+  expect(messageLayout).not.toBeNull()
+  expect(messageLayout!.actionsBottom).toBeLessThanOrEqual(messageLayout!.messageBottom)
 })
