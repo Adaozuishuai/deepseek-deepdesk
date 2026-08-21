@@ -111,6 +111,12 @@ deepseek-desktop/
 | 存储 | 主进程原子写 JSON（userData/deepdesk.json） |
 | 网络 | 主进程 fetch + SSE 流式解析（OpenAI 兼容协议） |
 
+## 🤝 贡献
+
+DeepDesk 当前处于 `0.x` 预稳定阶段。欢迎通过 Pull Request 参与，但合并前必须通过 CI、测试和 Code Review。
+
+贡献流程、版本规则、PR 清单和合并门禁见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
 ## ❓ FAQ
 
 - **API Key 存在哪里？** 本地磁盘 `%APPDATA%/deepseek-desktop/deepdesk.json`，不会上传到任何第三方。

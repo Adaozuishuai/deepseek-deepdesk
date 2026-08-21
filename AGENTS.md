@@ -70,7 +70,7 @@ pnpm release:win  # 完整门禁 + Windows 打包
 - 字符串与 JSX 属性用单引号。
 - 异步副作用显式 `void fn()` 标记，避免浮空 Promise。
 - 提交信息用 Conventional Commits：`feat` / `fix` / `chore` / `docs` / `refactor` / `test`。
-- 功能和修复必须同步更新语义化版本号：`feat` 升 minor，`fix` 升 patch，破坏性变更升 major；`package.json` 与 `src/shared/app-meta.ts` 必须保持一致。
+- 功能和修复必须同步更新语义化版本号；正式稳定版发布前主版本号固定为 `0`：`feat` 升 minor，`fix` 升 patch，破坏性变更升 minor 并在 PR / Release notes 标明。第一个稳定对外版本才允许升到 `1.0.0`；`package.json` 与 `src/shared/app-meta.ts` 必须保持一致。
 
 ## 测试
 
@@ -79,6 +79,7 @@ pnpm release:win  # 完整门禁 + Windows 打包
 - `pnpm test` 全绿才能提交。
 - 提交前建议跑 `pnpm quality`；发版前跑 `pnpm release:win`。
 - PR / CI 规则见 `docs/ci.md`；E2E 模式见 `docs/e2e.md`；发布流程见 `docs/release.md`。
+- 外部贡献、Code Review 和合并准入规则见 `CONTRIBUTING.md`。
 
 ## AI 协作沉淀
 

@@ -43,7 +43,7 @@ Common commands:
 - Ordinary code change: run `pnpm flow -- check`.
 - Behavior change: update or add tests, then run `pnpm flow -- check`.
 - IPC, permission, persistence, or Agent tool change: run `pnpm flow -- check --include-build`.
-- Feature or bugfix change: update SemVer in both `package.json` and `src/shared/app-meta.ts` (`feat` -> minor, `fix` -> patch, breaking -> major).
+- Feature or bugfix change: update SemVer in both `package.json` and `src/shared/app-meta.ts`. Before the first stable public release, keep the major version at `0` (`feat` -> minor, `fix` -> patch, breaking -> minor with explicit release notes). Only the first stable public release may become `1.0.0`.
 - Release candidate: run `pnpm flow -- release --target <platform>`.
 - macOS packages must be built on macOS.
 - Playwright Electron E2E is installed; run isolated mode for CI and session mode for local visual acceptance.
