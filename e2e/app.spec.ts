@@ -34,6 +34,50 @@ test('loads the app shell and opens settings', async () => {
   await expectAppShell(page)
   await expectComposerReady(page)
 
+  const fonts = await page.evaluate(async () => {
+    await document.fonts.ready
+    const title = document.querySelector('.empty-title')
+    const mono = getComputedStyle(document.documentElement).getPropertyValue('--font-mono')
+    return {
+      body: getComputedStyle(document.body).fontFamily,
+      title: title ? getComputedStyle(title).fontFamily : '',
+      mono,
+      loadedFaces: Array.from(document.fonts)
+        .filter(font => font.family === 'Alimama FangYuanTi VF' || font.family === 'Alimama ShuHeiTi')
+        .map(font => ({ family: font.family, status: font.status }))
+    }
+  })
+
+  expect(fonts.body).toContain('Alimama FangYuanTi VF')
+  expect(fonts.title).toContain('Alimama ShuHeiTi')
+  expect(fonts.mono).toContain('Cascadia Code')
+  expect(fonts.loadedFaces).toEqual(expect.arrayContaining([
+    { family: 'Alimama FangYuanTi VF', status: 'loaded' },
+    { family: 'Alimama ShuHeiTi', status: 'loaded' }
+  ]))
+
+  const composerToolbarStyles = await page.evaluate(() => {
+    const permission = document.querySelector('.composer-left .composer-menu-trigger')
+    const workdir = document.querySelector('.composer-left > .toolbar-item:not(.composer-menu-trigger)')
+    const model = document.querySelector('.composer-model-trigger')
+    if (!permission || !workdir || !model) return null
+
+    return [permission, workdir, model].map(element => {
+      const style = getComputedStyle(element)
+      return {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight
+      }
+    })
+  })
+
+  expect(composerToolbarStyles).toEqual([
+    { fontSize: '15px', fontWeight: '400', lineHeight: '22px' },
+    { fontSize: '15px', fontWeight: '400', lineHeight: '22px' },
+    { fontSize: '15px', fontWeight: '400', lineHeight: '22px' }
+  ])
+
   await openSettings(page)
 
   await expect(page.getByRole('button', { name: '模型服务' })).toBeVisible()
@@ -68,12 +112,15 @@ test('aligns the settings navigation and content columns', async () => {
 
 test('marks titlebar drag regions and supports settings back button', async () => {
   await expect(page.locator('.titlebar')).toHaveClass(/drag/)
-  await expect(page.locator('.titlebar-title')).toHaveClass(/no-drag/)
+  await expect(page.locator('.titlebar-tools')).toHaveClass(/no-drag/)
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
+  await expect(page.getByTitle('收起侧边栏')).toBeVisible()
+  await expect(page.getByTitle('新建任务')).toBeVisible()
   await expect(page.locator('.win-controls')).toHaveClass(/no-drag/)
 
   await openSettings(page)
 
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 设置' })).toBeVisible()
+  await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
   await goBackToChat(page)
 
@@ -125,10 +172,22 @@ test('centers the empty conversation composer with the welcome content', async (
 test('supports sidebar collapse, expand, and new task action', async () => {
   await expect(page.locator('.sidebar')).toBeVisible()
   await expect(page.getByRole('button', { name: /最近任务 \(0\)/ })).toHaveAttribute('aria-expanded', 'true')
+  const navIconMetrics = await page.evaluate(() => Array.from(document.querySelectorAll<SVGElement>('.sidebar-nav-icon')).map(icon => ({
+    width: Math.round(icon.getBoundingClientRect().width),
+    height: Math.round(icon.getBoundingClientRect().height),
+    iconClass: Array.from(icon.classList).find(className => className.startsWith('lucide-') && className !== 'lucide') ?? '',
+    strokeWidth: icon.getAttribute('stroke-width')
+  })))
+  expect(navIconMetrics).toEqual([
+    { width: 17, height: 17, iconClass: 'lucide-square-pen', strokeWidth: '1.9' },
+    { width: 17, height: 17, iconClass: 'lucide-link2', strokeWidth: '1.9' },
+    { width: 17, height: 17, iconClass: 'lucide-blocks', strokeWidth: '1.9' },
+    { width: 17, height: 17, iconClass: 'lucide-ellipsis', strokeWidth: '1.9' }
+  ])
 
   await page.getByTitle('收起侧边栏').click()
 
-  await expect(page.locator('.sidebar.collapsed')).toBeVisible()
+  await expect(page.locator('.sidebar.collapsed')).toHaveCSS('width', '0px')
   await expect(page.getByTitle('展开侧边栏')).toBeVisible()
 
   await page.getByTitle('新建任务').click()
@@ -143,7 +202,7 @@ test('supports sidebar collapse, expand, and new task action', async () => {
 
 test('opens sidebar feature pages and applies a skill template', async () => {
   await page.getByRole('button', { name: '连接器' }).click()
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 连接器' })).toBeVisible()
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
   await expect(page.locator('.hub-header', { hasText: '连接器' })).toBeVisible()
   await page.getByRole('button', { name: '打开模型服务设置' }).click()
   await expect(page.locator('.settings-title', { hasText: '模型服务' })).toBeVisible()
@@ -151,7 +210,7 @@ test('opens sidebar feature pages and applies a skill template', async () => {
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: '技能广场' }).click()
   await page.setViewportSize({ width: 1050, height: 720 })
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 技能广场' })).toBeVisible()
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
   await expect(page.locator('.skill-section-head', { hasText: '精选技能' })).toBeVisible()
   const skillToolbarLayout = await page.evaluate(() => {
     const controls = Array.from(document.querySelectorAll<HTMLElement>('.skill-top-tab, .skill-pill'))
@@ -185,7 +244,7 @@ test('opens sidebar feature pages and applies a skill template', async () => {
   await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toHaveValue(/UI 做一次走查/)
 
   await page.getByRole('button', { name: '更多' }).click()
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 更多' })).toBeVisible()
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
   await page.locator('.hub-card', { hasText: '设置' }).getByRole('button', { name: '打开设置' }).click()
   await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 })
@@ -198,7 +257,7 @@ test('supports global settings shortcuts and sidebar account footer', async () =
   await expect(page.locator('.settings-title', { hasText: '常规' })).toBeVisible()
 
   await page.keyboard.press('Escape')
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
 
   await expect(page.locator('.account-chip')).toContainText('个人账户')
   await page.getByTitle('设置 (Ctrl+,)').click()
@@ -207,7 +266,7 @@ test('supports global settings shortcuts and sidebar account footer', async () =
   await page.keyboard.down('Control')
   await page.keyboard.press(',')
   await page.keyboard.up('Control')
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+  await expect(page.locator('.titlebar-title')).toHaveCount(0)
 })
 
 test('selects agent permission mode from the gray composer menu', async () => {

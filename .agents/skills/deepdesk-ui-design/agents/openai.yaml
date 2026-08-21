@@ -1,0 +1,4 @@
+interface:
+  display_name: "DeepDesk UI Design"
+  short_description: "Reusable WorkBuddy-style UI rules for DeepDesk"
+  default_prompt: "Use $deepdesk-ui-design to polish DeepDesk UI with the established WorkBuddy-inspired design system."
