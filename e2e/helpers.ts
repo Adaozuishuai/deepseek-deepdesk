@@ -115,7 +115,7 @@ export async function openSettings(page: Page): Promise<void> {
 
 export async function goBackToChat(page: Page): Promise<void> {
   await page.getByTitle('返回').click()
-  await expect(page.locator('.titlebar-title', { hasText: 'DeepDesk · 对话' })).toBeVisible()
+  await expect(page.getByPlaceholder('发消息，或让我帮你做点事…')).toBeVisible()
 }
 
 export async function expectComposerReady(page: Page): Promise<void> {

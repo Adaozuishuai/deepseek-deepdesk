@@ -89,7 +89,7 @@ export default function App() {
 
   return (
     <div className='app-shell'>
-      <TitleBar view={view} />
+      <TitleBar collapsed={collapsed} onNewTask={newTask} onToggleSidebar={() => setCollapsed(c => !c)} />
       <div className='app-body'>
         {view !== 'settings' && (
           <Sidebar
@@ -98,7 +98,6 @@ export default function App() {
             onNewTask={newTask}
             onOpenSettings={openSettings}
             collapsed={collapsed}
-            onToggleCollapsed={() => setCollapsed(c => !c)}
           />
         )}
         <main className={view === 'settings' ? 'app-main settings-main' : 'app-main'}>

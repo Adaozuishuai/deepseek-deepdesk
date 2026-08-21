@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Blocks, ChevronDown, MoreHorizontal, Plus, Settings, Trash2, Pencil, PanelLeftClose, PanelLeftOpen, UserRound, PlugZap } from 'lucide-react'
+import { Blocks, ChevronDown, Link2, MoreHorizontal, Settings, Trash2, Pencil, SquarePen, UserRound } from 'lucide-react'
 import DeepSeekLogo from '../DeepSeekLogo'
 import { useAgentStore } from '../../stores/useAgentStore'
 import { formatTime } from '../../lib/format'
@@ -14,15 +14,13 @@ export default function Sidebar({
   onNavigate,
   onNewTask,
   onOpenSettings,
-  collapsed,
-  onToggleCollapsed
+  collapsed
 }: {
   view: AppView
   onNavigate: (view: AppView) => void
   onNewTask: () => void
   onOpenSettings: (tab?: SettingsTab) => void
   collapsed: boolean
-  onToggleCollapsed: () => void
 }) {
   const sessions = useAgentStore(s => s.sessions)
   const activeSessionId = useAgentStore(s => s.activeSessionId)
@@ -47,16 +45,7 @@ export default function Sidebar({
 
   return (
     <aside className={clsx('sidebar', collapsed && 'collapsed')}>
-      {collapsed ? (
-        <div className='sidebar-rail'>
-          <button className='icon-btn' onClick={onToggleCollapsed} title='展开侧边栏'><PanelLeftOpen size={16} /></button>
-          <button className='icon-btn' onClick={onNewTask} title='新建任务'><Plus size={16} /></button>
-          <button className='icon-btn' onClick={() => onNavigate('connectors')} title='连接器'><PlugZap size={15} /></button>
-          <button className='icon-btn' onClick={() => onNavigate('skills')} title='技能广场'><Blocks size={15} /></button>
-          <button className='icon-btn' onClick={() => onNavigate('more')} title='更多'><MoreHorizontal size={16} /></button>
-          <button className='icon-btn' onClick={() => onOpenSettings('general')} title='设置'><Settings size={15} /></button>
-        </div>
-      ) : (
+      {!collapsed && (
         <>
           <div className='sidebar-header'>
             <div className='brand'>
@@ -66,16 +55,12 @@ export default function Sidebar({
                 <span className='brand-version'>v{APP_VERSION}</span>
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <button className='new-chat-btn' title='新建任务 (Ctrl+N)' onClick={onNewTask}><Plus size={16} /></button>
-              <button className='new-chat-btn' title='收起侧边栏' onClick={onToggleCollapsed}><PanelLeftClose size={15} /></button>
-            </div>
           </div>
           <div className='sidebar-nav'>
-            <button className={clsx('sidebar-nav-item', view === 'chat' && !activeSessionId && 'active')} onClick={onNewTask}><Plus size={16} /> 新建任务</button>
-            <button className={clsx('sidebar-nav-item', view === 'connectors' && 'active')} onClick={() => onNavigate('connectors')}><PlugZap size={16} /> 连接器</button>
-            <button className={clsx('sidebar-nav-item', view === 'skills' && 'active')} onClick={() => onNavigate('skills')}><Blocks size={16} /> 技能广场</button>
-            <button className={clsx('sidebar-nav-item', view === 'more' && 'active')} onClick={() => onNavigate('more')}><MoreHorizontal size={16} /> 更多</button>
+            <button className={clsx('sidebar-nav-item', view === 'chat' && !activeSessionId && 'active')} onClick={onNewTask}><SquarePen className='sidebar-nav-icon' size={17} strokeWidth={1.9} /> 新建任务</button>
+            <button className={clsx('sidebar-nav-item', view === 'connectors' && 'active')} onClick={() => onNavigate('connectors')}><Link2 className='sidebar-nav-icon' size={17} strokeWidth={1.9} /> 连接器</button>
+            <button className={clsx('sidebar-nav-item', view === 'skills' && 'active')} onClick={() => onNavigate('skills')}><Blocks className='sidebar-nav-icon' size={17} strokeWidth={1.9} /> 技能广场</button>
+            <button className={clsx('sidebar-nav-item', view === 'more' && 'active')} onClick={() => onNavigate('more')}><MoreHorizontal className='sidebar-nav-icon' size={17} strokeWidth={1.9} /> 更多</button>
           </div>
           <button className='sidebar-section-toggle' aria-expanded={tasksOpen} onClick={() => setTasksOpen(open => !open)}>
             <span>最近任务 ({sessions.length})</span>
