@@ -41,9 +41,12 @@ pnpm flow -- <command> [options]
 
 ## 版本规则
 
-- `feat`：新增产品能力或可见功能，升 minor，例如 `1.4.0` → `1.5.0`。
-- `fix`：修复缺陷且不改变兼容性，升 patch，例如 `1.5.0` → `1.5.1`。
-- 破坏性变更：升 major，例如 `1.x.x` → `2.0.0`。
+DeepDesk 还没有发布第一个稳定对外版本，因此当前使用 `0.x.y` 版本线。
+
+- 稳定版前：主版本号固定为 `0`，不要把功能迭代升到 `1.x.y`。
+- `feat`：新增产品能力或可见功能，升 minor，例如 `0.5.8` → `0.6.0`。
+- `fix`：修复缺陷且不改变兼容性，升 patch，例如 `0.5.8` → `0.5.9`。
+- 破坏性变更：稳定版前升 minor，并在 PR / Release notes 中明确标注 breaking change；第一个稳定对外版本才允许发布 `1.0.0`。
 - UI 读取 `src/shared/app-meta.ts` 的 `APP_VERSION`；测试会校验它与 `package.json` 版本一致。
 
 ## 远端工程化
@@ -51,6 +54,7 @@ pnpm flow -- <command> [options]
 - CI：见 `docs/ci.md` 和 `.github/workflows/ci.yml`。
 - Release：见 `docs/release.md` 和 `.github/workflows/release.yml`。
 - E2E：见 `docs/e2e.md`。
+- 外部贡献、Code Review 和合并规则：见 `CONTRIBUTING.md` 与 `.github/pull_request_template.md`。
 
 ## 平台限制
 
